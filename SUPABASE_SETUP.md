@@ -105,11 +105,18 @@ ALTER TABLE offers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE redemptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
--- Allow public read for offers and products
-CREATE POLICY "Public read offers" ON offers FOR SELECT USING (true);
-CREATE POLICY "Public read products" ON products FOR SELECT USING (true);
+-- Allow anonymous reads (required for the app to load data)
+CREATE POLICY "Allow anon select users" ON users FOR SELECT USING (true);
+CREATE POLICY "Allow anon select transactions" ON transactions FOR SELECT USING (true);
+CREATE POLICY "Allow anon select offers" ON offers FOR SELECT USING (true);
+CREATE POLICY "Allow anon select products" ON products FOR SELECT USING (true);
+CREATE POLICY "Allow anon select redemptions" ON redemptions FOR SELECT USING (true);
 
--- Users can only access their own data
-CREATE POLICY "Users own data" ON users FOR ALL USING (auth.uid() = id);
-CREATE POLICY "Users own transactions" ON transactions FOR ALL USING (auth.uid() = user_id);
+-- Allow anonymous inserts for user creation and transactions
+CREATE POLICY "Allow anon insert users" ON users FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow anon insert transactions" ON transactions FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow anon insert redemptions" ON redemptions FOR INSERT WITH CHECK (true);
+
+-- Allow anonymous updates for points and user data
+CREATE POLICY "Allow anon update users" ON users FOR UPDATE USING (true);
 ```
