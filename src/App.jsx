@@ -76,7 +76,7 @@ function AppContent() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/rewards">
       <AppContent />
     </BrowserRouter>
   )
