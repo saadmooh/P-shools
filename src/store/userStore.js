@@ -74,6 +74,10 @@ const useUserStore = create((set, get) => ({
             telegram_id: telegramId,
             username: telegramData?.username || null,
             full_name: fullName,
+            language_code: telegramData?.language_code || null,
+            is_premium: telegramData?.is_premium || false,
+            photo_url: telegramData?.photo_url || null,
+            raw_telegram_data: telegramData || null,
           })
           .select()
           .single()

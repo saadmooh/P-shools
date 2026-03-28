@@ -35,7 +35,11 @@ CREATE TABLE IF NOT EXISTS users (
   city TEXT,
   gender TEXT DEFAULT 'unknown' CHECK (gender IN ('male','female','unknown')),
   joined_platform TIMESTAMPTZ DEFAULT now(),
-  last_active TIMESTAMPTZ DEFAULT now()
+  last_active TIMESTAMPTZ DEFAULT now(),
+  language_code TEXT,
+  is_premium BOOLEAN DEFAULT FALSE,
+  photo_url TEXT,
+  raw_telegram_data JSONB
 );
 
 CREATE TABLE IF NOT EXISTS stores (
