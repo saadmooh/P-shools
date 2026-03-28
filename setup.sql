@@ -40,7 +40,10 @@ CREATE TABLE IF NOT EXISTS users (
   is_premium BOOLEAN DEFAULT FALSE,
   photo_url TEXT,
   phone_number TEXT,
-  raw_telegram_data JSONB
+  raw_telegram_data JSONB,
+  is_bot BOOLEAN DEFAULT FALSE,
+  allows_write_to_pm BOOLEAN DEFAULT FALSE,
+  added_to_attachment_menu BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS stores (
