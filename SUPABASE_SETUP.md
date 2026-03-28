@@ -2,6 +2,34 @@
 
 Run these SQL commands in your **Supabase SQL Editor** (Dashboard → SQL Editor).
 
+## Drop All Existing Tables (Run First)
+
+Run this **once** to delete all old data and tables before creating the new schema:
+
+```sql
+-- Drop all policies first (avoids dependency errors)
+DO $$ DECLARE r RECORD;
+BEGIN
+  FOR r IN (SELECT tablename, policyname FROM pg_policies WHERE schemaname = 'public')
+  LOOP
+    EXECUTE 'DROP POLICY IF EXISTS "' || r.policyname || '" ON ' || r.tablename;
+  END LOOP;
+END $$;
+
+-- Drop all tables in correct order (child tables first)
+DROP TABLE IF EXISTS ad_impressions CASCADE;
+DROP TABLE IF EXISTS user_behavior_tags CASCADE;
+DROP TABLE IF EXISTS cross_promotions CASCADE;
+DROP TABLE IF EXISTS referrals CASCADE;
+DROP TABLE IF EXISTS redemptions CASCADE;
+DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS offers CASCADE;
+DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS user_store_memberships CASCADE;
+DROP TABLE IF EXISTS stores CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+```
+
 ## Create Tables
 
 ```sql
