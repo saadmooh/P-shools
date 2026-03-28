@@ -3,16 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <script>
-      // Single-page app route redirect for GitHub Pages
-      var pathSegmentsToKeep = 1; // Keep "/rewards"
-      var l = window.location;
-      l.replace(
-        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-        l.hash
-      );
+      // Single-page app redirect for GitHub Pages
+      // Stores the intended path as a query param, then loads index.html
+      var path = window.location.pathname.split('/').slice(2).join('/')
+      var search = window.location.search.replace(/&/g, '~and~')
+      window.location.replace('/rewards/?/' + path + search)
     </script>
   </head>
   <body>

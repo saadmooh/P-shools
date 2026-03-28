@@ -10,12 +10,16 @@ const useUserStore = create((set, get) => ({
 
   init: async () => {
     if (get().initialized) return
-    
-    const result = await initializeDatabase()
-    if (result.needsSetup) {
-      console.log('Database needs setup')
-    } else {
-      await seedDemoData()
+
+    try {
+      const result = await initializeDatabase()
+      if (result.needsSetup) {
+        console.log('Database needs setup')
+      } else {
+        await seedDemoData()
+      }
+    } catch (err) {
+      console.error('Init error:', err)
     }
     set({ initialized: true })
   },

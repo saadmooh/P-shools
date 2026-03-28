@@ -22,23 +22,31 @@ function AppContent() {
   const { user, loading, initUser, init } = useUserStore()
 
   useEffect(() => {
-    // Initialize database
-    init()
-    
-    // Initialize Telegram
-    initTelegram()
-    const tgUser = getTelegramUser()
-    
-    if (tgUser) {
-      initUser(tgUser.id, tgUser)
-    } else {
-      // Demo user for testing
-      initUser(123456789, {
-        username: 'demo_user',
-        first_name: 'Ahmed',
-        last_name: 'Benali',
-      })
+    const setup = async () => {
+      // Initialize database (best effort)
+      try {
+        await init()
+      } catch (err) {
+        console.error('Database init failed:', err)
+      }
+
+      // Initialize Telegram
+      initTelegram()
+      const tgUser = getTelegramUser()
+
+      if (tgUser) {
+        initUser(tgUser.id, tgUser)
+      } else {
+        // Demo user for testing
+        initUser(123456789, {
+          username: 'demo_user',
+          first_name: 'Ahmed',
+          last_name: 'Benali',
+        })
+      }
     }
+
+    setup()
   }, [init, initUser])
 
   if (loading) return <SplashScreen />
