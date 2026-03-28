@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 
 export default function Scanner() {
   const navigate = useNavigate()
-  const { user, addPoints, refreshUser } = useUserStore()
+  const { user, membership, store, addPoints } = useUserStore()
   const [phase, setPhase] = useState('scanning')
   const [error, setError] = useState(null)
   const [pointsEarned, setPointsEarned] = useState(0)
@@ -52,19 +52,24 @@ export default function Scanner() {
               if (user?.id) {
                 await supabase.from('transactions').insert({
                   user_id: user.id,
+                  store_id: store?.id,
+                  membership_id: membership?.id,
                   type: 'earn',
                   points: points,
                   amount: amount,
                   note: `Purchase - ${amount} DZD`,
                 })
 
-                await supabase
-                  .from('users')
-                  .update({ 
-                    points: (user.points || 0) + points,
-                    last_purchase: new Date().toISOString()
-                  })
-                  .eq('id', user.id)
+                // Update membership points
+                if (membership?.id) {
+                  await supabase
+                    .from('user_store_memberships')
+                    .update({
+                      points: (membership.points || 0) + points,
+                      last_purchase: new Date().toISOString(),
+                    })
+                    .eq('id', membership.id)
+                }
               }
 
               setPointsEarned(points)

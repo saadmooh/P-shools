@@ -6,22 +6,27 @@ export const useProducts = () => {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const { user } = useUserStore()
+  const { store } = useUserStore()
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('products')
           .select('*')
           .eq('is_active', true)
           .order('created_at', { ascending: false })
 
+        if (store?.id) {
+          query = query.eq('store_id', store.id)
+        }
+
+        const { data, error } = await query
+
         if (error) throw error
         setProducts(data || [])
       } catch (err) {
         console.error('useProducts error:', err)
-        // Fallback mock data
         setProducts([
           { id: '1', name: 'Premium Coffee Maker', description: 'State-of-the-art', price: 299, category: 'appliances' },
           { id: '2', name: 'Wireless Earbuds Pro', description: 'High-quality audio', price: 199, category: 'electronics' },
@@ -36,7 +41,7 @@ export const useProducts = () => {
     }
 
     fetchProducts()
-  }, [])
+  }, [store?.id])
 
   return { products, loading, error }
 }

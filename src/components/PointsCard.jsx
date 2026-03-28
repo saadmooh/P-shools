@@ -1,23 +1,32 @@
 import { motion } from 'framer-motion'
+import useUserStore from '../store/userStore'
 import TierBadge from './TierBadge'
 
-const tierConfig = {
-  bronze: { min: 0, max: 999 },
-  silver: { min: 1000, max: 4999 },
-  gold: { min: 5000, max: 9999 },
-  platinum: { min: 10000, max: Infinity },
-}
+export default function PointsCard() {
+  const { membership, store, user } = useUserStore()
 
-export default function PointsCard({ points = 0, tier = 'bronze' }) {
+  const points = membership?.points || 0
+  const tier = membership?.tier || 'bronze'
+  const tierConfig = store?.tier_config || {
+    bronze: { min: 0, max: 999 },
+    silver: { min: 1000, max: 4999 },
+    gold: { min: 5000, max: 9999 },
+    platinum: { min: 10000, max: 999999 },
+  }
+
   const tierKey = tier?.toLowerCase() || 'bronze'
   const currentTier = tierConfig[tierKey] || tierConfig.bronze
-  
+
   const nextTierKey = { bronze: 'silver', silver: 'gold', gold: 'platinum', platinum: null }[tierKey]
   const nextTier = nextTierKey ? tierConfig[nextTierKey] : null
-  
-  const progress = nextTier 
+
+  const progress = nextTier
     ? ((points - currentTier.min) / (nextTier.min - currentTier.min)) * 100
     : 100
+
+  const joinedDate = membership?.joined_at
+    ? new Date(membership.joined_at).toLocaleDateString('en', { month: 'short', year: 'numeric' })
+    : 'Recently'
 
   return (
     <motion.div
@@ -56,7 +65,7 @@ export default function PointsCard({ points = 0, tier = 'bronze' }) {
             />
           </div>
           <p className="text-xs text-muted mt-2 text-center">
-            {nextTier.min - points > 0 
+            {nextTier.min - points > 0
               ? `${(nextTier.min - points).toLocaleString()} points to ${nextTierKey}`
               : '🎉 Max tier reached!'}
           </p>
@@ -68,7 +77,7 @@ export default function PointsCard({ points = 0, tier = 'bronze' }) {
           <span className="text-accent text-sm">👤</span>
         </div>
         <p className="text-sm text-muted">
-          Ahmed Benali • <span className="text-accent">Member since Jan 2024</span>
+          {user?.full_name || 'Member'} • <span className="text-accent">Member since {joinedDate}</span>
         </p>
       </div>
     </motion.div>

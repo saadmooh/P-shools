@@ -4,11 +4,13 @@ import useUserStore from '../store/userStore'
 import TierBadge from '../components/TierBadge'
 
 export default function Profile() {
-  const { user } = useUserStore()
+  const { user, membership, store } = useUserStore()
   const [showReferral, setShowReferral] = useState(false)
 
   const copyReferral = () => {
-    const link = `https://t.me/YourBot?start=ref_${user?.referral_code}`
+    const botUsername = store?.bot_username || 'YourBot'
+    const referralCode = membership?.referral_code || ''
+    const link = `https://t.me/${botUsername}?start=ref_${referralCode}`
     navigator.clipboard.writeText(link)
     setShowReferral(true)
     setTimeout(() => setShowReferral(false), 2000)
@@ -42,7 +44,7 @@ export default function Profile() {
               <h2 className="text-xl font-bold text-text">
                 {user?.full_name || user?.first_name || 'User'}
               </h2>
-              <TierBadge tier={user?.tier || 'bronze'} size="medium" />
+              <TierBadge tier={membership?.tier || 'bronze'} size="medium" />
             </div>
           </div>
 
@@ -71,7 +73,7 @@ export default function Profile() {
           
           <div className="flex items-center gap-2 bg-surface rounded-2xl p-3">
             <code className="flex-1 text-accent-dark font-bold text-lg">
-              {user?.referral_code || 'LOADING...'}
+              {membership?.referral_code || 'LOADING...'}
             </code>
             <motion.button
               whileTap={{ scale: 0.95 }}

@@ -7,6 +7,7 @@ import { useProducts } from '../hooks/useProducts'
 import PointsCard from '../components/PointsCard'
 import ProductCard from '../components/ProductCard'
 import OfferCard from '../components/OfferCard'
+import CrossPromoCard from '../components/CrossPromoCard'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -53,7 +54,7 @@ export default function Home() {
         </motion.div>
 
         <section className="mb-6">
-          <PointsCard points={user?.points || 0} tier={user?.tier || 'bronze'} />
+          <PointsCard />
         </section>
 
         <section className="mb-6">
@@ -100,6 +101,8 @@ export default function Home() {
             )}
           </div>
         </section>
+
+        <CrossPromoCard />
 
         <section>
           <div className="flex justify-between items-center mb-4">

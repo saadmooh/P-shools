@@ -6,26 +6,31 @@ export const useOffers = () => {
   const [offers, setOffers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const { user } = useUserStore()
+  const { store } = useUserStore()
 
   useEffect(() => {
     const fetchOffers = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('offers')
           .select('*')
           .eq('is_active', true)
           .order('created_at', { ascending: false })
 
+        if (store?.id) {
+          query = query.eq('store_id', store.id)
+        }
+
+        const { data, error } = await query
+
         if (error) throw error
         setOffers(data || [])
       } catch (err) {
         console.error('useOffers error:', err)
-        // Fallback mock data
         setOffers([
-          { id: '1', title: '30% Off Shirts', description: 'Valid on all shirts', points_cost: 500, category: 'discount', valid_until: '2024-12-31' },
-          { id: '2', title: 'Double Points', description: 'Earn 2x points', points_cost: 0, category: 'bonus', valid_until: '2024-12-31' },
-          { id: '3', title: 'Free Gift', description: 'With purchase over 5000', points_cost: 300, category: 'gift', valid_until: '2024-12-31' },
+          { id: '1', title: '30% Off Shirts', description: 'Valid on all shirts', points_cost: 500, type: 'discount', valid_until: '2024-12-31' },
+          { id: '2', title: 'Double Points', description: 'Earn 2x points', points_cost: 0, type: 'double_points', valid_until: '2024-12-31' },
+          { id: '3', title: 'Free Gift', description: 'With purchase over 5000', points_cost: 300, type: 'gift', valid_until: '2024-12-31' },
         ])
       } finally {
         setLoading(false)
@@ -33,7 +38,7 @@ export const useOffers = () => {
     }
 
     fetchOffers()
-  }, [])
+  }, [store?.id])
 
   return { offers, loading, error }
 }
