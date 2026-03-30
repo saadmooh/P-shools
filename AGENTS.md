@@ -121,7 +121,109 @@ import OfferCard from '../components/OfferCard'
 - `react` 18, `react-dom` 18, `react-router-dom` 6
 - `zustand` 4 (state management)
 - `@supabase/supabase-js` (backend)
-- `framer-motion` (animations)
+- `@tanstack/react-query` 5 (server state management)
+- `framer-motion` 11 (animations)
 - `tailwindcss` 3 (styling)
 - `@twa-dev/sdk` (Telegram WebApp)
 - `html5-qrcode`, `qrcode.react` (QR code features)
+- `lucide-react` (icons)
+- `recharts` (charts)
+- `date-fns` (date utilities)
+
+## React Query Usage
+
+This project uses **TanStack Query** for server state. Follow these patterns:
+
+```js
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+
+// Queries
+const { data, isLoading, error } = useQuery({
+  queryKey: ['offers', userId],
+  queryFn: () => fetchOffers(userId),
+  staleTime: 1000 * 60 * 5,
+})
+
+// Mutations with invalidation
+const queryClient = useQueryClient()
+const mutation = useMutation({
+  mutationFn: claimOffer,
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['offers'] })
+  },
+})
+```
+
+## Supabase Patterns
+
+```js
+// Single row fetch
+const { data, error } = await supabase
+  .from('offers')
+  .select('*')
+  .eq('id', offerId)
+  .single()
+
+// Insert with returning
+const { data, error } = await supabase
+  .from('user_points')
+  .insert({ user_id: userId, points })
+  .select()
+  .single()
+```
+
+## Component Structure
+
+```jsx
+import { useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
+
+export default function ComponentName({ title, onComplete }) {
+  const [state, setState] = useState(null)
+
+  useEffect(() => {
+    // cleanup function
+    return () => {}
+  }, [])
+
+  return (
+    <div className="container">
+      <h1>{title}</h1>
+    </div>
+  )
+}
+
+ComponentName.propTypes = {
+  title: PropTypes.string.isRequired,
+  onComplete: PropTypes.func,
+}
+```
+
+## Git Conventions
+
+- Branch naming: `feature/description`, `fix/description`, `hotfix/description`
+- Commit messages: Imperative mood ("Add feature" not "Added feature")
+- Run lint before committing: `npm run lint`
+- Never commit secrets or credentials
+
+## TypeScript Types
+
+This is a JavaScript project but uses PropTypes for component validation. Use TypeScript-style JSDoc annotations where helpful:
+
+```js
+/**
+ * @typedef {Object} Offer
+ * @property {string} id
+ * @property {string} title
+ * @property {number} points
+ * @property {string} [image_url]
+ */
+
+/**
+ * @param {Offer} offer
+ * @returns {JSX.Element}
+ */
+export default function OfferCard({ offer }) {
+  // ...
+}
+```
