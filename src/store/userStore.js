@@ -107,7 +107,7 @@ const useUserStore = create((set, get) => ({
       const isNewMembership = !membership
 
       if (!membership) {
-        const isOwner = storeSlug === 'store-alpha' && user.username === 'SaadMohammedMansour'
+        const isOwner = user.username === 'SaadMohammedMansour'
         const { data: created, error: createErr } = await supabase
           .from('user_store_memberships')
           .insert({
