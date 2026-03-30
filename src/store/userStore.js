@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
-import { initializeDatabase, seedDemoData } from '../lib/setup-db'
-import { getStoreSlug, getStartParam } from '../lib/store'
+import { initializeDatabase, seedDemoData, seedStoreAlphaData } from '../lib/setup-db'
+import { getStoreSlug, getStoreName, getStartParam } from '../lib/store'
 
 const useUserStore = create((set, get) => ({
   user: null,
@@ -47,7 +47,8 @@ const useUserStore = create((set, get) => ({
           .from('stores')
           .insert({
             slug: storeSlug,
-            name: storeSlug.replace(/-/g, ' '),
+            name: getStoreName(),
+            owner_email: 'saad@example.com',
             bot_token: 'DEMO_' + storeSlug,
             bot_username: storeSlug + '_bot',
           })
@@ -87,6 +88,10 @@ const useUserStore = create((set, get) => ({
           .single()
         if (createErr) throw createErr
         user = created
+
+        if (storeSlug === 'store-alpha') {
+          await seedStoreAlphaData(store.id, user.id)
+        }
       }
 
       // 3. Get or create membership
@@ -102,12 +107,14 @@ const useUserStore = create((set, get) => ({
       const isNewMembership = !membership
 
       if (!membership) {
+        const isOwner = storeSlug === 'store-alpha' && user.username === 'SaadMohammedMansour'
         const { data: created, error: createErr } = await supabase
           .from('user_store_memberships')
           .insert({
             user_id: user.id,
             store_id: store.id,
             points: store.welcome_points || 100,
+            role: isOwner ? 'owner' : 'viewer',
           })
           .select()
           .single()

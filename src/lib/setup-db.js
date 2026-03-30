@@ -73,3 +73,38 @@ export async function seedDemoData() {
 
   console.log('Demo data seeded!')
 }
+
+export async function seedStoreAlphaData(storeId, userId) {
+  const { count: productCount } = await supabase
+    .from('products')
+    .select('*', { count: 'exact', head: true })
+    .eq('store_id', storeId)
+
+  if (productCount > 0) {
+    console.log('store-alpha data already seeded')
+    return
+  }
+
+  const products = [
+    { store_id: storeId, name: 'Premium Coffee Maker', description: 'State-of-the-art coffee machine', price: 299, category: 'appliances', is_active: true },
+    { store_id: storeId, name: 'Wireless Earbuds Pro', description: 'High-quality audio', price: 199, category: 'electronics', is_active: true },
+    { store_id: storeId, name: 'Yoga Mat Premium', description: 'Eco-friendly yoga mat', price: 49, category: 'fitness', is_active: true },
+    { store_id: storeId, name: 'Smart Watch Series X', description: 'Advanced tracking features', price: 349, category: 'electronics', is_active: true },
+    { store_id: storeId, name: 'Designer Handbag', description: 'Elegant leather handbag', price: 179, category: 'fashion', is_active: true },
+    { store_id: storeId, name: 'Blender Set Professional', description: 'High-performance blender', price: 129, category: 'appliances', is_active: true },
+  ]
+
+  const { error: productsError } = await supabase.from('products').insert(products)
+  if (productsError) console.log('Products seed error:', productsError.message)
+
+  const offers = [
+    { store_id: storeId, title: '30% Off Shirts', description: 'Valid on all shirts', type: 'discount', discount_percent: 30, points_cost: 500, min_tier: 'bronze', valid_until: '2026-12-31', is_active: true },
+    { store_id: storeId, title: 'Double Points', description: 'Earn 2x points on all purchases', type: 'double_points', points_cost: 0, min_tier: 'bronze', valid_until: '2026-12-31', is_active: true },
+    { store_id: storeId, title: 'Free Gift', description: 'Free gift with purchase over 5000 points', type: 'gift', points_cost: 300, min_tier: 'silver', valid_until: '2026-12-31', is_active: true },
+  ]
+
+  const { error: offersError } = await supabase.from('offers').insert(offers)
+  if (offersError) console.log('Offers seed error:', offersError.message)
+
+  console.log('store-alpha data seeded for user:', userId)
+}

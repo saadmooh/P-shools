@@ -42,7 +42,7 @@ create table public.users (
 -- Stores table
 create table public.stores (
   id uuid default uuid_generate_v4() primary key,
-  owner_email text not null,
+  owner_email text,
   name text not null,
   slug text unique not null,
   description text,
@@ -446,35 +446,4 @@ BEGIN
   END IF;
 END $$;
 
--- Seed super admin user and demo store (matching actual database schema)
-INSERT INTO public.users (id, telegram_id, username, full_name, photo_url, language_code, is_super_admin, role, created_at, updated_at)
-VALUES ('b7849646-d726-4ece-ab01-f6180d99f8bd', 1203654887, 'SaadMohammedMansour', 'ساعد محمد', 'https://t.me/i/userpic/320/vaEmCb4JhMM_i58csiaO0WR_j7EmajVRj1lcKxuUrWs.svg', 'ar', true, 'super_admin', now(), now())
-ON CONFLICT (telegram_id) DO UPDATE SET is_super_admin = true;
-
-INSERT INTO public.stores (id, slug, name, owner_email, category, points_rate, welcome_points, primary_color, plan, is_active, created_at, updated_at)
-VALUES ('11111111-1111-1111-1111-111111111111', 'store-alpha', 'متجر التجميع', 'saad@example.com', 'متجر عام', 1, 100, '#D4AF37', 'basic', true, now(), now())
-ON CONFLICT (slug) DO NOTHING;
-
--- Add super admin to the store as owner
-INSERT INTO public.user_store_memberships (user_id, store_id, role, points, tier, joined_at)
-VALUES ('b7849646-d726-4ece-ab01-f6180d99f8bd', '11111111-1111-1111-1111-111111111111', 'owner', 0, 'bronze', now())
-ON CONFLICT (user_id, store_id) DO NOTHING;
-
--- Products for store-alpha
-INSERT INTO public.products (store_id, name, description, price, category, is_active, created_at)
-VALUES 
-  ('11111111-1111-1111-1111-111111111111', 'Premium Coffee Maker', 'State-of-the-art coffee machine', 299, 'appliances', true, now()),
-  ('11111111-1111-1111-1111-111111111111', 'Wireless Earbuds Pro', 'High-quality audio', 199, 'electronics', true, now()),
-  ('11111111-1111-1111-1111-111111111111', 'Yoga Mat Premium', 'Eco-friendly yoga mat', 49, 'fitness', true, now()),
-  ('11111111-1111-1111-1111-111111111111', 'Smart Watch Series X', 'Advanced tracking features', 349, 'electronics', true, now()),
-  ('11111111-1111-1111-1111-111111111111', 'Designer Handbag', 'Elegant leather handbag', 179, 'fashion', true, now()),
-  ('11111111-1111-1111-1111-111111111111', 'Blender Set Professional', 'High-performance blender', 129, 'appliances', true, now())
-ON CONFLICT DO NOTHING;
-
--- Offers for store-alpha
-INSERT INTO public.offers (store_id, title, description, type, discount_percent, points_cost, min_tier, valid_until, is_active, created_at)
-VALUES 
-  ('11111111-1111-1111-1111-111111111111', '30% Off Shirts', 'Valid on all shirts', 'discount', 30, 500, 'bronze', '2026-12-31', true, now()),
-  ('11111111-1111-1111-1111-111111111111', 'Double Points', 'Earn 2x points on all purchases', 'double_points', null, 0, 'bronze', '2026-12-31', true, now()),
-  ('11111111-1111-1111-1111-111111111111', 'Free Gift', 'Free gift with purchase over 5000 points', 'gift', null, 300, 'silver', '2026-12-31', true, now())
-ON CONFLICT DO NOTHING;
+-- No seed data - all data is created when users join via Telegram

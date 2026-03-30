@@ -13,6 +13,10 @@ export const getStoreSlug = () => {
   return 'store-alpha'
 }
 
+export const getStoreName = () => {
+  return import.meta.env.VITE_STORE_NAME || getStoreSlug().replace(/-/g, ' ')
+}
+
 export const getStartParam = () => {
   // Telegram WebApp start param (for referrals)
   const tg = window.Telegram?.WebApp
