@@ -59,7 +59,9 @@ create table public.stores (
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
   is_active boolean default true,
-  ad_points_balance integer default 0
+  ad_points_balance integer default 0,
+  bot_token text,
+  bot_username text
 );
 
 -- Products table
@@ -427,6 +429,20 @@ BEGIN
     WHERE table_name = 'stores' AND column_name = 'plan'
   ) THEN
     ALTER TABLE public.stores ADD COLUMN plan text DEFAULT 'basic';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'stores' AND column_name = 'bot_token'
+  ) THEN
+    ALTER TABLE public.stores ADD COLUMN bot_token text;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'stores' AND column_name = 'bot_username'
+  ) THEN
+    ALTER TABLE public.stores ADD COLUMN bot_username text;
   END IF;
 END $$;
 
