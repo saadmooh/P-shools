@@ -22,6 +22,45 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
+/* Dashboard Dark Theme - Merchant Panel */
+[data-theme="dashboard"] {
+  --bg:        #0d0d0d;
+  --surface:   #161616;
+  --card:      #1e1e1e;
+  --sidebar:   #111111;
+  --accent:    #D4AF37;
+  --accent-dim:#D4AF3730;
+  --text:      #f0f0f0;
+  --muted:     #888888;
+  --border:    #2a2a2a;
+  --success:   #22c55e;
+  --error:     #ef4444;
+  --warning:   #f59e0b;
+}
+
+/* Dashboard utility classes */
+.dashboard-theme {
+  --bg:        #0d0d0d;
+  --surface:   #161616;
+  --card:      #1e1e1e;
+  --sidebar:   #111111;
+  --accent:    #D4AF37;
+  --accent-dim:#D4AF3730;
+  --text:      #f0f0f0;
+  --muted:     #888888;
+  --border:    #2a2a2a;
+  --success:   #22c55e;
+  --error:     #ef4444;
+  --warning:   #f59e0b;
+  --radius:    12px;
+  --radius-sm: 8px;
+}
+
+.dashboard-theme body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
 * {
   box-sizing: border-box;
 }

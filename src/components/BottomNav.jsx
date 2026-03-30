@@ -6,6 +6,7 @@ const navItems = [
   { icon: '📷', label: '', path: '/scan', isScan: true },
   { icon: '🎁', label: 'Offers', path: '/offers' },
   { icon: '👗', label: 'Products', path: '/products' },
+  { icon: '📊', label: 'لوحة التحكم', path: '/dashboard', isDashboard: true },
   { icon: '👤', label: 'Profile', path: '/profile' },
 ]
 
@@ -35,7 +36,7 @@ export default function BottomNav({ activePath = '/', onNavigate }) {
               key={item.path}
               onClick={() => handleNav(item.path)}
               className={`flex flex-col items-center cursor-pointer ${
-                isScan ? 'w-14' : 'flex-1'
+                isScan ? 'w-14' : item.isDashboard ? 'flex-[1.3]' : 'flex-1'
               }`}
             >
               {isScan ? (
@@ -48,14 +49,8 @@ export default function BottomNav({ activePath = '/', onNavigate }) {
                 </motion.div>
               ) : (
                 <>
-                  <span className={`text-xl transition-transform ${isActive ? 'scale-110' : ''}`}>
-                    {item.icon}
-                  </span>
-                  <span
-                    className={`text-xs mt-1 font-medium ${
-                      isActive ? 'text-accent' : 'text-muted'
-                    }`}
-                  >
+                  <span className={`text-xl ${isActive ? 'scale-110' : ''}`}>{item.icon}</span>
+                  <span className={`text-[10px] mt-1 font-medium ${isActive ? 'text-accent' : 'text-muted'}`}>
                     {item.label}
                   </span>
                 </>

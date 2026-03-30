@@ -1,7 +1,9 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import useUserStore from './store/userStore'
+import { useDashboardStore } from './store/dashboardStore'
 import { initTelegram, getTelegramUser } from './lib/telegram'
 
 import SplashScreen from './components/SplashScreen'
@@ -15,6 +17,41 @@ import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
 import History from './pages/History'
 import Profile from './pages/Profile'
+import Layout from './components/Layout'
+import NoAccess from './pages/NoAccess'
+import Overview from './pages/Overview'
+import QRGenerator from './pages/QRGenerator'
+import CustomersPage from './pages/Customers'
+import CustomerDetail from './pages/CustomerDetail'
+import Notifications from './pages/Notifications'
+import Settings from './pages/Settings'
+
+const queryClient = new QueryClient()
+
+function DashboardRouter() {
+  const { loading, hasAccess, init } = useDashboardStore()
+
+  useEffect(() => { init() }, [init])
+
+  if (loading) return <SplashScreen />
+  if (!hasAccess) return <NoAccess />
+
+  return (
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<Overview />} />
+        <Route path="overview" element={<Overview />} />
+        <Route path="qr" element={<QRGenerator />} />
+        <Route path="products" element={<Products />} />
+        <Route path="offers" element={<Offers />} />
+        <Route path="customers" element={<CustomersPage />} />
+        <Route path="customers/:memberId" element={<CustomerDetail />} />
+        <Route path="notifications" element={<Notifications />} />
+        <Route path="settings" element={<Settings />} />
+      </Route>
+    </Routes>
+  )
+}
 
 function AppContent() {
   const navigate = useNavigate()
@@ -23,21 +60,16 @@ function AppContent() {
 
   useEffect(() => {
     const setup = async () => {
-      // Initialize database (best effort)
       try {
         await init()
       } catch (err) {
         console.error('Database init failed:', err)
       }
-
-      // Initialize Telegram
       initTelegram()
       const tgUser = getTelegramUser()
-
       if (tgUser) {
         initUser(tgUser.id, tgUser)
       } else {
-        // Demo user for testing
         initUser(123456789, {
           username: 'demo_user',
           first_name: 'Ahmed',
@@ -45,11 +77,14 @@ function AppContent() {
         })
       }
     }
-
     setup()
   }, [init, initUser])
 
   if (loading) return <SplashScreen />
+
+  if (location.pathname.startsWith('/dashboard') || location.pathname === '/dashboard') {
+    return <DashboardRouter />
+  }
 
   const showBottomNav = user?.full_name && location.pathname !== '/scan'
 
@@ -73,6 +108,7 @@ function AppContent() {
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/history" element={<History />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="*" element={<Home />} />
           </Routes>
         </motion.div>
       </AnimatePresence>
@@ -85,7 +121,9 @@ function AppContent() {
 export default function App() {
   return (
     <BrowserRouter basename="/rewards">
-      <AppContent />
+      <QueryClientProvider client={queryClient}>
+        <AppContent />
+      </QueryClientProvider>
     </BrowserRouter>
   )
 }

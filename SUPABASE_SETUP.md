@@ -1,275 +1,231 @@
-# Supabase Database Setup — Multi-Store SaaS Platform
+# Supabase Database Setup
 
-Run these SQL commands in your **Supabase SQL Editor** (Dashboard → SQL Editor).
+Run the SQL commands in your **Supabase SQL Editor** (Dashboard → SQL Editor).
 
-## Drop All Existing Tables (Run First)
+For the complete schema, see [`setup.sql`](./setup.sql) — it contains everything in one file.
 
-Run this **once** to delete all old data and tables before creating the new schema:
+## Overview
 
+The database uses **Telegram-based authentication** (no `auth.users` dependency for most tables). Users are identified by `telegram_id` and the app accesses data via the **anon key** with permissive RLS policies.
+
+## Tables
+
+| Table | Description |
+|---|---|
+| `users` | Platform users identified by `telegram_id` |
+| `stores` | Loyalty program stores with tier config |
+| `products` | Store product catalog |
+| `offers` | Redeemable offers (discounts, gifts, etc.) |
+| `user_store_memberships` | Links users to stores with points/tier |
+| `transactions` | Point earn/redeem/adjust/expire history |
+| `redemptions` | Offer redemption records |
+| `promotions` | Advertising campaigns with targeting |
+
+## Quick Setup
+
+### 1. Create Tables
+
+The full DDL is in [`setup.sql`](./setup.sql). Key schema details:
+
+**users** — identified by `telegram_id`, no Supabase auth dependency:
 ```sql
--- Drop all policies first (avoids dependency errors)
-DO $$ DECLARE r RECORD;
-BEGIN
-  FOR r IN (SELECT tablename, policyname FROM pg_policies WHERE schemaname = 'public')
-  LOOP
-    EXECUTE 'DROP POLICY IF EXISTS "' || r.policyname || '" ON ' || r.tablename;
-  END LOOP;
-END $$;
-
--- Drop all tables in correct order (child tables first)
-DROP TABLE IF EXISTS ad_impressions CASCADE;
-DROP TABLE IF EXISTS user_behavior_tags CASCADE;
-DROP TABLE IF EXISTS cross_promotions CASCADE;
-DROP TABLE IF EXISTS referrals CASCADE;
-DROP TABLE IF EXISTS redemptions CASCADE;
-DROP TABLE IF EXISTS transactions CASCADE;
-DROP TABLE IF EXISTS offers CASCADE;
-DROP TABLE IF EXISTS products CASCADE;
-DROP TABLE IF EXISTS user_store_memberships CASCADE;
-DROP TABLE IF EXISTS stores CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
-```
-
-## Create Tables
-
-```sql
--- Users (shared across all stores)
-CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  telegram_id BIGINT UNIQUE NOT NULL,
-  username TEXT,
-  full_name TEXT,
-  birth_date DATE,
-  city TEXT,
-  gender TEXT DEFAULT 'unknown' CHECK (gender IN ('male','female','unknown')),
-  joined_platform TIMESTAMPTZ DEFAULT now(),
-  last_active TIMESTAMPTZ DEFAULT now()
-);
-
--- Stores
-CREATE TABLE IF NOT EXISTS stores (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  slug TEXT UNIQUE NOT NULL,
-  name TEXT NOT NULL,
-  logo_url TEXT,
-  category TEXT,
-  city TEXT,
-  primary_color TEXT DEFAULT '#D4AF37',
-  bot_token TEXT UNIQUE NOT NULL,
-  bot_username TEXT UNIQUE NOT NULL,
-  mini_app_url TEXT,
-  points_rate INTEGER DEFAULT 1,
-  tier_config JSONB DEFAULT '{
-    "bronze":   {"min": 0,     "max": 999},
-    "silver":   {"min": 1000,  "max": 4999},
-    "gold":     {"min": 5000,  "max": 9999},
-    "platinum": {"min": 10000, "max": 999999}
-  }',
-  welcome_points INTEGER DEFAULT 100,
-  plan TEXT DEFAULT 'basic' CHECK (plan IN ('basic','pro','enterprise')),
-  owner_email TEXT,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- User-Store Memberships (the core linking table)
-CREATE TABLE IF NOT EXISTS user_store_memberships (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  store_id UUID REFERENCES stores(id) ON DELETE CASCADE,
-  points INTEGER DEFAULT 0,
-  tier TEXT DEFAULT 'bronze' CHECK (tier IN ('bronze','silver','gold','platinum')),
-  total_spent NUMERIC(12,2) DEFAULT 0,
-  total_visits INTEGER DEFAULT 0,
-  joined_at TIMESTAMPTZ DEFAULT now(),
-  last_purchase TIMESTAMPTZ,
-  referral_code TEXT UNIQUE DEFAULT 'ref-' || substr(md5(random()::text), 1, 6),
-  UNIQUE (user_id, store_id)
-);
-
--- Transactions
-CREATE TABLE IF NOT EXISTS transactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id),
-  store_id UUID REFERENCES stores(id),
-  membership_id UUID REFERENCES user_store_memberships(id),
-  type TEXT CHECK (type IN ('earn','redeem','bonus','referral','ad_reward','welcome')),
-  points INTEGER NOT NULL,
-  amount NUMERIC(10,2),
-  qr_token TEXT UNIQUE,
-  qr_used BOOLEAN DEFAULT FALSE,
-  qr_expires_at TIMESTAMPTZ,
-  offer_id UUID,
-  note TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Offers
-CREATE TABLE IF NOT EXISTS offers (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  store_id UUID REFERENCES stores(id),
-  title TEXT NOT NULL,
-  description TEXT,
-  type TEXT CHECK (type IN ('discount','gift','double_points','flash','exclusive')),
-  discount_percent INTEGER,
-  points_cost INTEGER NOT NULL,
-  min_tier TEXT DEFAULT 'bronze',
-  occasion_type TEXT CHECK (occasion_type IN ('always','fixed','birthday','anniversary','win_back','flash')),
-  occasion_date DATE,
-  valid_from TIMESTAMPTZ,
-  valid_until TIMESTAMPTZ,
-  image_url TEXT,
-  usage_limit INTEGER,
-  usage_count INTEGER DEFAULT 0,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Redemptions
-CREATE TABLE IF NOT EXISTS redemptions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id),
-  store_id UUID REFERENCES stores(id),
-  offer_id UUID REFERENCES offers(id),
-  coupon_code TEXT UNIQUE NOT NULL DEFAULT upper(substr(md5(random()::text), 1, 10)),
-  redeemed_at TIMESTAMPTZ DEFAULT now(),
-  verified BOOLEAN DEFAULT FALSE,
-  verified_at TIMESTAMPTZ,
-  expires_at TIMESTAMPTZ DEFAULT now() + interval '24 hours'
-);
-
--- Products
-CREATE TABLE IF NOT EXISTS products (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  store_id UUID REFERENCES stores(id),
-  name TEXT NOT NULL,
-  description TEXT,
-  price NUMERIC(10,2),
-  category TEXT,
-  image_url TEXT,
-  is_active BOOLEAN DEFAULT TRUE,
-  is_exclusive BOOLEAN DEFAULT FALSE,
-  min_tier_to_view TEXT DEFAULT 'bronze',
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Referrals
-CREATE TABLE IF NOT EXISTS referrals (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  store_id UUID REFERENCES stores(id),
-  referrer_id UUID REFERENCES users(id),
-  referred_id UUID REFERENCES users(id),
-  referrer_points INTEGER DEFAULT 200,
-  referred_points INTEGER DEFAULT 100,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE (store_id, referred_id)
-);
-
--- Cross Promotions (ads between stores)
-CREATE TABLE IF NOT EXISTS cross_promotions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  from_store_id UUID REFERENCES stores(id),
-  to_store_id UUID REFERENCES stores(id),
-  title TEXT NOT NULL,
-  body TEXT,
-  image_url TEXT,
-  cta_label TEXT DEFAULT 'اكتشف المتجر',
-  cta_url TEXT,
-  target_tiers TEXT[] DEFAULT ARRAY['bronze','silver','gold','platinum'],
-  target_gender TEXT,
-  target_city TEXT,
-  target_min_spent NUMERIC(10,2),
-  reward_points INTEGER DEFAULT 50,
-  budget_points INTEGER,
-  spent_points INTEGER DEFAULT 0,
-  starts_at TIMESTAMPTZ,
-  ends_at TIMESTAMPTZ,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Ad Impressions (tracking)
-CREATE TABLE IF NOT EXISTS ad_impressions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  promotion_id UUID REFERENCES cross_promotions(id),
-  user_id UUID REFERENCES users(id),
-  shown_at TIMESTAMPTZ DEFAULT now(),
-  clicked BOOLEAN DEFAULT FALSE,
-  clicked_at TIMESTAMPTZ,
-  converted BOOLEAN DEFAULT FALSE,
-  converted_at TIMESTAMPTZ,
-  points_rewarded INTEGER DEFAULT 0
-);
-
--- User Behavior Tags
-CREATE TABLE IF NOT EXISTS user_behavior_tags (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id),
-  tag TEXT NOT NULL,
-  score INTEGER DEFAULT 1,
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE (user_id, tag)
+create table public.users (
+  id uuid default gen_random_uuid() primary key,
+  full_name text,
+  username text unique,
+  telegram_id bigint unique,
+  language_code text,
+  avatar_url text,
+  photo_url text,
+  phone text,
+  birth_date date,
+  gender text check (gender in ('male', 'female')),
+  role text default 'user' check (role in ('user', 'admin', 'super_admin')),
+  is_super_admin boolean default false,
+  is_bot boolean default false,
+  is_premium boolean default false,
+  permissions text[] default array['read']::text[],
+  ad_points_balance integer default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  last_active timestamptz
 );
 ```
 
-## Seed Demo Store + Data
+**stores** — with tier thresholds and points configuration:
+```sql
+create table public.stores (
+  id uuid default uuid_generate_v4() primary key,
+  owner_email text not null,
+  name text not null,
+  slug text unique not null,
+  description text,
+  logo_url text,
+  phone text,
+  address text,
+  city text,
+  category text,
+  tier_config jsonb default '{"bronze": 0, "silver": 10000, "gold": 50000, "platinum": 100000}'::jsonb,
+  points_rate integer default 1,
+  welcome_points integer default 100,
+  primary_color text default '#D4AF37',
+  plan text default 'basic',
+  is_active boolean default true,
+  ad_points_balance integer default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+```
+
+**user_store_memberships** — the core linking table with role-based access:
+```sql
+create table public.user_store_memberships (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.users(id) on delete cascade not null,
+  store_id uuid references public.stores(id) on delete cascade not null,
+  role text default 'viewer' check (role in ('owner', 'manager', 'cashier', 'viewer')),
+  permissions jsonb default '{"view": true}'::jsonb,
+  points integer default 0,
+  tier text default 'bronze' check (tier in ('bronze', 'silver', 'gold', 'platinum')),
+  total_spent integer default 0,
+  visit_count integer default 0,
+  last_purchase timestamptz,
+  joined_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(user_id, store_id)
+);
+```
+
+**transactions** — point ledger with type tracking:
+```sql
+create table public.transactions (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.users(id) on delete cascade not null,
+  store_id uuid references public.stores(id) on delete cascade not null,
+  type text not null check (type in ('earn', 'redeem', 'adjust', 'expire')),
+  points integer not null,
+  amount integer,
+  description text,
+  created_at timestamptz default now()
+);
+```
+
+**offers** — with tier gating and occasion-based scheduling:
+```sql
+create table public.offers (
+  id uuid default uuid_generate_v4() primary key,
+  store_id uuid references public.stores(id) on delete cascade not null,
+  title text not null,
+  description text,
+  type text not null check (type in ('discount', 'gift', 'double_points', 'flash', 'exclusive')),
+  discount_percent integer,
+  points_cost integer default 0,
+  min_tier text default 'bronze' check (min_tier in ('bronze', 'silver', 'gold', 'platinum')),
+  occasion_type text default 'always' check (occasion_type in ('always', 'fixed', 'birthday', 'anniversary', 'win_back', 'flash')),
+  occasion_date date,
+  valid_from timestamptz,
+  valid_until timestamptz,
+  usage_limit integer,
+  image_url text,
+  is_active boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+```
+
+**promotions** — ad campaigns with audience targeting:
+```sql
+create table public.promotions (
+  id uuid default uuid_generate_v4() primary key,
+  store_id uuid references public.stores(id) on delete cascade not null,
+  title text not null,
+  body text,
+  image_url text,
+  cta_label text default 'اكتشف المتجر',
+  cta_url text,
+  target_tiers text[] default array['bronze', 'silver', 'gold', 'platinum'],
+  target_gender text check (target_gender in ('male', 'female', null)),
+  target_city text,
+  target_min_spent integer,
+  reward_points integer default 50,
+  budget_points integer default 1000,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  is_active boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+```
+
+### 2. Storage Buckets
 
 ```sql
--- Create a demo store
-INSERT INTO stores (slug, name, bot_token, bot_username, primary_color, welcome_points, is_active)
-VALUES ('demo-store', 'Demo Store', 'DEMO_BOT_TOKEN', 'demo_store_bot', '#10b981', 100, true)
+INSERT INTO storage.buckets (id, name, public) VALUES
+  ('product-images', 'product-images', true)
+ON CONFLICT DO NOTHING;
+```
+
+### 3. Row Level Security
+
+All tables have RLS enabled. Policies allow **anon access** for the Telegram-based auth flow:
+
+```sql
+-- Enable RLS
+alter table public.users enable row level security;
+alter table public.stores enable row level security;
+alter table public.products enable row level security;
+alter table public.offers enable row level security;
+alter table public.user_store_memberships enable row level security;
+alter table public.transactions enable row level security;
+alter table public.redemptions enable row level security;
+alter table public.promotions enable row level security;
+
+-- Anon read/write policies for users, stores, products, offers, memberships, transactions, redemptions, promotions
+-- (see setup.sql lines 180-249 for all policies)
+```
+
+Super admin and store-owner policies are also defined for `stores`, `products`, `offers`, and `promotions` tables.
+
+### 4. Indexes
+
+```sql
+create index idx_products_store_id on public.products(store_id);
+create index idx_offers_store_id on public.offers(store_id);
+create index idx_user_store_memberships_store_id on public.user_store_memberships(store_id);
+create index idx_user_store_memberships_tier on public.user_store_memberships(tier);
+create index idx_transactions_store_id on public.transactions(store_id);
+create index idx_transactions_user_id on public.transactions(user_id);
+create index idx_redemptions_store_id on public.redemptions(store_id);
+create index idx_redemptions_offer_id on public.redemptions(offer_id);
+create index idx_promotions_store_id on public.promotions(store_id);
+```
+
+### 5. Triggers & Functions
+
+- **`update_user_tier()`** — automatically updates membership tier when points change, based on the store's `tier_config`
+- **`handle_new_user()`** — syncs new `auth.users` to the `public.users` table (SECURITY DEFINER)
+
+### 6. Seed Data
+
+A super admin user and demo store are seeded at the end of `setup.sql`:
+
+```sql
+-- Super admin user (telegram_id: 1203654887)
+INSERT INTO public.users (id, telegram_id, username, full_name, is_super_admin, role, language_code)
+VALUES ('b7849646-d726-4ece-ab01-f6180d99f8bd', 1203654887, 'SaadMohammedMansour', 'ساعد محمد', true, 'super_admin', 'ar')
+ON CONFLICT (telegram_id) DO UPDATE SET is_super_admin = true;
+
+-- Demo store
+INSERT INTO public.stores (id, slug, name, owner_email, category, points_rate, welcome_points, primary_color, plan, is_active)
+VALUES ('11111111-1111-1111-1111-111111111111', 'store-alpha', 'متجر التجميع', 'saad@example.com', 'متجر عام', 1, 100, '#D4AF37', 'basic', true)
 ON CONFLICT (slug) DO NOTHING;
+
+-- Admin membership
+INSERT INTO public.user_store_memberships (user_id, store_id, role, points, tier)
+VALUES ('b7849646-d726-4ece-ab01-f6180d99f8bd', '11111111-1111-1111-1111-111111111111', 'owner', 0, 'bronze')
+ON CONFLICT (user_id, store_id) DO NOTHING;
 ```
 
-## Row Level Security
+## Migration Notes
 
-Run this **once** to enable RLS and allow anonymous access:
-
-```sql
--- Enable RLS on all tables
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stores ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_store_memberships ENABLE ROW LEVEL SECURITY;
-ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE offers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE redemptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE products ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies if re-running
-DROP POLICY IF EXISTS "Allow anon select users" ON users;
-DROP POLICY IF EXISTS "Allow anon select stores" ON stores;
-DROP POLICY IF EXISTS "Allow anon select memberships" ON user_store_memberships;
-DROP POLICY IF EXISTS "Allow anon select transactions" ON transactions;
-DROP POLICY IF EXISTS "Allow anon select offers" ON offers;
-DROP POLICY IF EXISTS "Allow anon select products" ON products;
-DROP POLICY IF EXISTS "Allow anon select redemptions" ON redemptions;
-DROP POLICY IF EXISTS "Allow anon insert users" ON users;
-DROP POLICY IF EXISTS "Allow anon insert memberships" ON user_store_memberships;
-DROP POLICY IF EXISTS "Allow anon insert transactions" ON transactions;
-DROP POLICY IF EXISTS "Allow anon insert redemptions" ON redemptions;
-DROP POLICY IF EXISTS "Allow anon update users" ON users;
-DROP POLICY IF EXISTS "Allow anon update memberships" ON user_store_memberships;
-
--- Allow anonymous reads (required for the app to load data)
-CREATE POLICY "Allow anon select users" ON users FOR SELECT USING (true);
-CREATE POLICY "Allow anon select stores" ON stores FOR SELECT USING (true);
-CREATE POLICY "Allow anon select memberships" ON user_store_memberships FOR SELECT USING (true);
-CREATE POLICY "Allow anon select transactions" ON transactions FOR SELECT USING (true);
-CREATE POLICY "Allow anon select offers" ON offers FOR SELECT USING (true);
-CREATE POLICY "Allow anon select products" ON products FOR SELECT USING (true);
-CREATE POLICY "Allow anon select redemptions" ON redemptions FOR SELECT USING (true);
-
--- Allow anonymous inserts
-CREATE POLICY "Allow anon insert users" ON users FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon insert stores" ON stores FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon insert offers" ON offers FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon insert products" ON products FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon insert memberships" ON user_store_memberships FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon insert transactions" ON transactions FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon insert redemptions" ON redemptions FOR INSERT WITH CHECK (true);
-
--- Allow anonymous updates
-CREATE POLICY "Allow anon update users" ON users FOR UPDATE USING (true);
-CREATE POLICY "Allow anon update stores" ON stores FOR UPDATE USING (true);
-CREATE POLICY "Allow anon update memberships" ON user_store_memberships FOR UPDATE USING (true);
-```
+`setup.sql` includes a `DO $$` block (lines 330-431) that safely adds missing columns to existing tables. Run the full file on an existing database — the `DROP TABLE IF EXISTS ... CASCADE` statements at the top will reset everything, or the migration block will add only what's missing.

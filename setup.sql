@@ -1,242 +1,445 @@
--- =============================================
--- DROP ALL EXISTING TABLES
--- =============================================
+-- Supabase Schema for Rewards Dashboard
+-- Authentication and Users extension
+create extension if not exists "uuid-ossp";
 
-DO $$ DECLARE r RECORD;
-BEGIN
-  FOR r IN (SELECT tablename, policyname FROM pg_policies WHERE schemaname = 'public')
-  LOOP
-    EXECUTE 'DROP POLICY IF EXISTS "' || r.policyname || '" ON ' || r.tablename;
-  END LOOP;
-END $$;
-
+-- Drop existing tables (in order to handle foreign key dependencies)
 DROP TABLE IF EXISTS ad_impressions CASCADE;
 DROP TABLE IF EXISTS user_behavior_tags CASCADE;
 DROP TABLE IF EXISTS cross_promotions CASCADE;
 DROP TABLE IF EXISTS referrals CASCADE;
 DROP TABLE IF EXISTS redemptions CASCADE;
 DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS promotions CASCADE;
 DROP TABLE IF EXISTS offers CASCADE;
 DROP TABLE IF EXISTS products CASCADE;
 DROP TABLE IF EXISTS user_store_memberships CASCADE;
 DROP TABLE IF EXISTS stores CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
--- =============================================
--- CREATE TABLES
--- =============================================
-
-CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  telegram_id BIGINT UNIQUE NOT NULL,
-  username TEXT,
-  full_name TEXT,
-  birth_date DATE,
-  city TEXT,
-  gender TEXT DEFAULT 'unknown' CHECK (gender IN ('male','female','unknown')),
-  joined_platform TIMESTAMPTZ DEFAULT now(),
-  last_active TIMESTAMPTZ DEFAULT now(),
-  language_code TEXT,
-  is_premium BOOLEAN DEFAULT FALSE,
-  photo_url TEXT,
-  phone_number TEXT,
-  raw_telegram_data JSONB,
-  is_bot BOOLEAN DEFAULT FALSE,
-  allows_write_to_pm BOOLEAN DEFAULT FALSE,
-  added_to_attachment_menu BOOLEAN DEFAULT FALSE
+-- Users table (identified by telegram_id, no auth.users dependency)
+create table public.users (
+  id uuid default gen_random_uuid() primary key,
+  full_name text,
+  username text unique,
+  telegram_id bigint unique,
+  language_code text,
+  avatar_url text,
+  photo_url text,
+  phone text,
+  birth_date date,
+  gender text check (gender in ('male', 'female')),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  role text default 'user' check (role in ('user', 'admin', 'super_admin')),
+  is_super_admin boolean default false,
+  is_bot boolean default false,
+  is_premium boolean default false,
+  last_active timestamptz,
+  permissions text[] default array['read']::text[],
+  ad_points_balance integer default 0
 );
 
-CREATE TABLE IF NOT EXISTS stores (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  slug TEXT UNIQUE NOT NULL,
-  name TEXT NOT NULL,
-  logo_url TEXT,
-  category TEXT,
-  city TEXT,
-  primary_color TEXT DEFAULT '#D4AF37',
-  bot_token TEXT UNIQUE NOT NULL,
-  bot_username TEXT UNIQUE NOT NULL,
-  mini_app_url TEXT,
-  points_rate INTEGER DEFAULT 1,
-  tier_config JSONB DEFAULT '{
-    "bronze":   {"min": 0,     "max": 999},
-    "silver":   {"min": 1000,  "max": 4999},
-    "gold":     {"min": 5000,  "max": 9999},
-    "platinum": {"min": 10000, "max": 999999}
-  }',
-  welcome_points INTEGER DEFAULT 100,
-  plan TEXT DEFAULT 'basic' CHECK (plan IN ('basic','pro','enterprise')),
-  owner_email TEXT,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT now()
+-- Stores table
+create table public.stores (
+  id uuid default uuid_generate_v4() primary key,
+  owner_email text not null,
+  name text not null,
+  slug text unique not null,
+  description text,
+  logo_url text,
+  phone text,
+  address text,
+  city text,
+  category text,
+  tier_config jsonb default '{"bronze": 0, "silver": 10000, "gold": 50000, "platinum": 100000}'::jsonb,
+  points_rate integer default 1,
+  welcome_points integer default 100,
+  primary_color text default '#D4AF37',
+  plan text default 'basic',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  is_active boolean default true,
+  ad_points_balance integer default 0
 );
 
-CREATE TABLE IF NOT EXISTS user_store_memberships (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  store_id UUID REFERENCES stores(id) ON DELETE CASCADE,
-  points INTEGER DEFAULT 0,
-  tier TEXT DEFAULT 'bronze' CHECK (tier IN ('bronze','silver','gold','platinum')),
-  total_spent NUMERIC(12,2) DEFAULT 0,
-  total_visits INTEGER DEFAULT 0,
-  joined_at TIMESTAMPTZ DEFAULT now(),
-  last_purchase TIMESTAMPTZ,
-  referral_code TEXT UNIQUE DEFAULT 'ref-' || substr(md5(random()::text), 1, 6),
-  UNIQUE (user_id, store_id)
+-- Products table
+create table public.products (
+  id uuid default uuid_generate_v4() primary key,
+  store_id uuid references public.stores(id) on delete cascade not null,
+  name text not null,
+  description text,
+  price integer not null,
+  category text default 'عام',
+  image_url text,
+  is_exclusive boolean default false,
+  min_tier_to_view text default 'bronze' check (min_tier_to_view in ('bronze', 'silver', 'gold', 'platinum')),
+  is_active boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 
-CREATE TABLE IF NOT EXISTS transactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id),
-  store_id UUID REFERENCES stores(id),
-  membership_id UUID REFERENCES user_store_memberships(id),
-  type TEXT CHECK (type IN ('earn','redeem','bonus','referral','ad_reward','welcome')),
-  points INTEGER NOT NULL,
-  amount NUMERIC(10,2),
-  qr_token TEXT UNIQUE,
-  qr_used BOOLEAN DEFAULT FALSE,
-  qr_expires_at TIMESTAMPTZ,
-  offer_id UUID,
-  note TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+-- Offers table
+create table public.offers (
+  id uuid default uuid_generate_v4() primary key,
+  store_id uuid references public.stores(id) on delete cascade not null,
+  title text not null,
+  description text,
+  type text not null check (type in ('discount', 'gift', 'double_points', 'flash', 'exclusive')),
+  discount_percent integer,
+  points_cost integer default 0,
+  min_tier text default 'bronze' check (min_tier in ('bronze', 'silver', 'gold', 'platinum')),
+  occasion_type text default 'always' check (occasion_type in ('always', 'fixed', 'birthday', 'anniversary', 'win_back', 'flash')),
+  occasion_date date,
+  valid_from timestamptz,
+  valid_until timestamptz,
+  usage_limit integer,
+  image_url text,
+  is_active boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 
-CREATE TABLE IF NOT EXISTS offers (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  store_id UUID REFERENCES stores(id),
-  title TEXT NOT NULL,
-  description TEXT,
-  type TEXT CHECK (type IN ('discount','gift','double_points','flash','exclusive')),
-  discount_percent INTEGER,
-  points_cost INTEGER NOT NULL,
-  min_tier TEXT DEFAULT 'bronze',
-  occasion_type TEXT CHECK (occasion_type IN ('always','fixed','birthday','anniversary','win_back','flash')),
-  occasion_date DATE,
-  valid_from TIMESTAMPTZ,
-  valid_until TIMESTAMPTZ,
-  image_url TEXT,
-  usage_limit INTEGER,
-  usage_count INTEGER DEFAULT 0,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT now()
+-- User-Store Memberships table
+create table public.user_store_memberships (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.users(id) on delete cascade not null,
+  store_id uuid references public.stores(id) on delete cascade not null,
+  role text default 'viewer' check (role in ('owner', 'manager', 'cashier', 'viewer')),
+  permissions jsonb default '{"view": true}'::jsonb,
+  points integer default 0,
+  tier text default 'bronze' check (tier in ('bronze', 'silver', 'gold', 'platinum')),
+  total_spent integer default 0,
+  visit_count integer default 0,
+  last_purchase timestamptz,
+  joined_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(user_id, store_id)
 );
 
-CREATE TABLE IF NOT EXISTS redemptions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id),
-  store_id UUID REFERENCES stores(id),
-  offer_id UUID REFERENCES offers(id),
-  coupon_code TEXT UNIQUE NOT NULL DEFAULT upper(substr(md5(random()::text), 1, 10)),
-  redeemed_at TIMESTAMPTZ DEFAULT now(),
-  verified BOOLEAN DEFAULT FALSE,
-  verified_at TIMESTAMPTZ,
-  expires_at TIMESTAMPTZ DEFAULT now() + interval '24 hours'
+-- Transactions table
+create table public.transactions (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.users(id) on delete cascade not null,
+  store_id uuid references public.stores(id) on delete cascade not null,
+  type text not null check (type in ('earn', 'redeem', 'adjust', 'expire')),
+  points integer not null,
+  amount integer,
+  description text,
+  created_at timestamptz default now()
 );
 
-CREATE TABLE IF NOT EXISTS products (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  store_id UUID REFERENCES stores(id),
-  name TEXT NOT NULL,
-  description TEXT,
-  price NUMERIC(10,2),
-  category TEXT,
-  image_url TEXT,
-  is_active BOOLEAN DEFAULT TRUE,
-  is_exclusive BOOLEAN DEFAULT FALSE,
-  min_tier_to_view TEXT DEFAULT 'bronze',
-  created_at TIMESTAMPTZ DEFAULT now()
+-- Redemptions table
+create table public.redemptions (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.users(id) on delete cascade not null,
+  store_id uuid references public.stores(id) on delete cascade not null,
+  offer_id uuid references public.offers(id) on delete cascade not null,
+  points_spent integer not null,
+  discount_applied integer,
+  created_at timestamptz default now()
 );
 
-CREATE TABLE IF NOT EXISTS referrals (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  store_id UUID REFERENCES stores(id),
-  referrer_id UUID REFERENCES users(id),
-  referred_id UUID REFERENCES users(id),
-  referrer_points INTEGER DEFAULT 200,
-  referred_points INTEGER DEFAULT 100,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE (store_id, referred_id)
+-- Promotions/Advertising Campaigns table
+create table public.promotions (
+  id uuid default uuid_generate_v4() primary key,
+  store_id uuid references public.stores(id) on delete cascade not null,
+  title text not null,
+  body text,
+  image_url text,
+  cta_label text default 'اكتشف المتجر',
+  cta_url text,
+  target_tiers text[] default array['bronze', 'silver', 'gold', 'platinum'],
+  target_gender text check (target_gender in ('male', 'female', null)),
+  target_city text,
+  target_min_spent integer,
+  reward_points integer default 50,
+  budget_points integer default 1000,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  is_active boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 
-CREATE TABLE IF NOT EXISTS cross_promotions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  from_store_id UUID REFERENCES stores(id),
-  to_store_id UUID REFERENCES stores(id),
-  title TEXT NOT NULL,
-  body TEXT,
-  image_url TEXT,
-  cta_label TEXT DEFAULT 'اكتشف المتجر',
-  cta_url TEXT,
-  target_tiers TEXT[] DEFAULT ARRAY['bronze','silver','gold','platinum'],
-  target_gender TEXT,
-  target_city TEXT,
-  target_min_spent NUMERIC(10,2),
-  reward_points INTEGER DEFAULT 50,
-  budget_points INTEGER,
-  spent_points INTEGER DEFAULT 0,
-  starts_at TIMESTAMPTZ,
-  ends_at TIMESTAMPTZ,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
+-- Storage buckets
+INSERT INTO storage.buckets (id, name, public) VALUES 
+  ('product-images', 'product-images', true)
+ON CONFLICT DO NOTHING;
 
-CREATE TABLE IF NOT EXISTS ad_impressions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  promotion_id UUID REFERENCES cross_promotions(id),
-  user_id UUID REFERENCES users(id),
-  shown_at TIMESTAMPTZ DEFAULT now(),
-  clicked BOOLEAN DEFAULT FALSE,
-  clicked_at TIMESTAMPTZ,
-  converted BOOLEAN DEFAULT FALSE,
-  converted_at TIMESTAMPTZ,
-  points_rewarded INTEGER DEFAULT 0
-);
+-- Row Level Security Policies
+alter table public.users enable row level security;
+alter table public.stores enable row level security;
+alter table public.products enable row level security;
+alter table public.offers enable row level security;
+alter table public.user_store_memberships enable row level security;
+alter table public.transactions enable row level security;
+alter table public.redemptions enable row level security;
+alter table public.promotions enable row level security;
 
-CREATE TABLE IF NOT EXISTS user_behavior_tags (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id),
-  tag TEXT NOT NULL,
-  score INTEGER DEFAULT 1,
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE (user_id, tag)
-);
+-- Users policies - allow anonymous access for telegram-based auth
+create policy "Allow anon select users" on public.users for select using (true);
+create policy "Allow anon insert users" on public.users for insert with check (true);
+create policy "Allow anon update users" on public.users for update using (true);
 
--- =============================================
--- SEED DEMO STORE
--- =============================================
+-- Stores policies - allow anonymous select, insert
+create policy "Allow anon select stores" on public.stores for select using (true);
+create policy "Allow anon insert stores" on public.stores for insert with check (true);
+create policy "Allow anon update stores" on public.stores for update using (true);
+create policy "Super admins can manage all stores" on public.stores
+  for all using ( exists (
+    select 1 from public.users 
+    where users.id = auth.uid() and users.is_super_admin = true
+  ));
+create policy "Store owners can manage their stores" on public.stores
+  for all using (auth.jwt()->>'email' = owner_email);
 
-INSERT INTO stores (slug, name, bot_token, bot_username, primary_color, welcome_points, is_active)
-VALUES ('demo-store', 'Demo Store', 'DEMO_BOT_TOKEN', 'demo_store_bot', '#10b981', 100, true)
+-- Products policies - allow anonymous access
+create policy "Allow anon select products" on public.products for select using (true);
+create policy "Allow anon insert products" on public.products for insert with check (true);
+create policy "Allow anon update products" on public.products for update using (true);
+create policy "Super admins can manage products" on public.products
+  for all using ( exists (
+    select 1 from public.users 
+    where users.id = auth.uid() and users.is_super_admin = true
+  ));
+create policy "Store owners can manage products" on public.products
+  for all using (exists (
+    select 1 from public.stores where id = products.store_id and owner_email = auth.jwt()->>'email'
+  ));
+
+-- Offers policies - allow anonymous access
+create policy "Allow anon select offers" on public.offers for select using (true);
+create policy "Allow anon insert offers" on public.offers for insert with check (true);
+create policy "Allow anon update offers" on public.offers for update using (true);
+create policy "Super admins can manage offers" on public.offers
+  for all using ( exists (
+    select 1 from public.users 
+    where users.id = auth.uid() and users.is_super_admin = true
+  ));
+create policy "Store owners can manage offers" on public.offers
+  for all using (exists (
+    select 1 from public.stores where id = offers.store_id and owner_email = auth.jwt()->>'email'
+  ));
+
+-- User store memberships policies - allow anonymous access
+create policy "Allow anon select memberships" on public.user_store_memberships for select using (true);
+create policy "Allow anon insert memberships" on public.user_store_memberships for insert with check (true);
+create policy "Allow anon update memberships" on public.user_store_memberships for update using (true);
+
+-- Transactions policies - allow anonymous access
+create policy "Allow anon select transactions" on public.transactions for select using (true);
+create policy "Allow anon insert transactions" on public.transactions for insert with check (true);
+
+-- Redemptions policies
+create policy "Allow anon select redemptions" on public.redemptions for select using (true);
+create policy "Allow anon insert redemptions" on public.redemptions for insert with check (true);
+
+-- Promotions policies - allow anonymous access
+create policy "Allow anon select promotions" on public.promotions for select using (true);
+create policy "Allow anon insert promotions" on public.promotions for insert with check (true);
+create policy "Allow anon update promotions" on public.promotions for update using (true);
+create policy "Super admins can manage promotions" on public.promotions
+  for all using ( exists (
+    select 1 from public.users 
+    where users.id = auth.uid() and users.is_super_admin = true
+  ));
+create policy "Store owners can manage promotions" on public.promotions
+  for all using (exists (
+    select 1 from public.stores where id = promotions.store_id and owner_email = auth.jwt()->>'email'
+  ));
+
+-- Indexes
+create index idx_products_store_id on public.products(store_id);
+create index idx_offers_store_id on public.offers(store_id);
+create index idx_user_store_memberships_store_id on public.user_store_memberships(store_id);
+create index idx_user_store_memberships_tier on public.user_store_memberships(tier);
+create index idx_transactions_store_id on public.transactions(store_id);
+create index idx_transactions_user_id on public.transactions(user_id);
+create index idx_redemptions_store_id on public.redemptions(store_id);
+create index idx_redemptions_offer_id on public.redemptions(offer_id);
+create index idx_promotions_store_id on public.promotions(store_id);
+
+-- Function to update tier based on points
+create or replace function public.update_user_tier()
+returns trigger as $$
+begin
+  declare
+    tier_config jsonb;
+    current_points integer;
+    new_tier text;
+  begin
+    select s.tier_config, new.points into tier_config, current_points
+    from public.stores s
+    join public.user_store_memberships new on new.store_id = s.id
+    where new.id = tg.id;
+
+    if current_points >= (tier_config->>'platinum')::integer then
+      new_tier := 'platinum';
+    elsif current_points >= (tier_config->>'gold')::integer then
+      new_tier := 'gold';
+    elsif current_points >= (tier_config->>'silver')::integer then
+      new_tier := 'silver';
+    else
+      new_tier := 'bronze';
+    end if;
+
+    if new_tier <> old.tier then
+      update public.user_store_memberships set tier = new_tier, updated_at = now() where id = tg.id;
+    end if;
+
+    return new;
+  end;
+end;
+$$ language plpgsql;
+
+-- Trigger for automatic tier updates
+DROP TRIGGER IF EXISTS update_tier_trigger ON public.user_store_memberships;
+CREATE TRIGGER update_tier_trigger
+  AFTER UPDATE OF points ON public.user_store_memberships
+  FOR EACH ROW EXECUTE FUNCTION public.update_user_tier();
+
+-- Function to handle new user creation
+DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+
+CREATE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.users (id, full_name, username, telegram_id)
+  VALUES (
+    new.id,
+    new.raw_user_meta_data->>'full_name',
+    new.raw_user_meta_data->>'username',
+    (new.raw_user_meta_data->>'telegram_id')::bigint
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger for user creation
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================================
+-- MIGRATION: Add missing columns to existing databases
+-- Run these commands if you already have tables created
+-- ============================================================
+
+DO $$
+BEGIN
+  -- Add language_code to users if not exists
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'language_code'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN language_code text;
+  END IF;
+
+  -- Add avatar_url to users if not exists
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'avatar_url'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN avatar_url text;
+  END IF;
+
+  -- Add photo_url to users if not exists
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'photo_url'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN photo_url text;
+  END IF;
+
+  -- Add last_active to users if not exists
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'last_active'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN last_active timestamptz;
+  END IF;
+
+  -- Add is_bot to users if not exists
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'is_bot'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN is_bot boolean DEFAULT false;
+  END IF;
+
+  -- Add is_premium to users if not exists
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'is_premium'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN is_premium boolean DEFAULT false;
+  END IF;
+
+  -- Add role to user_store_memberships if not exists
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'user_store_memberships' AND column_name = 'role'
+  ) THEN
+    ALTER TABLE public.user_store_memberships ADD COLUMN role text DEFAULT 'viewer';
+  END IF;
+
+  -- Add permissions to user_store_memberships if not exists
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'user_store_memberships' AND column_name = 'permissions'
+  ) THEN
+    ALTER TABLE public.user_store_memberships ADD COLUMN permissions jsonb DEFAULT '{"view": true}';
+  END IF;
+
+  -- Add missing columns to stores if not exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'stores' AND column_name = 'category'
+  ) THEN
+    ALTER TABLE public.stores ADD COLUMN category text;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'stores' AND column_name = 'points_rate'
+  ) THEN
+    ALTER TABLE public.stores ADD COLUMN points_rate integer DEFAULT 1;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'stores' AND column_name = 'welcome_points'
+  ) THEN
+    ALTER TABLE public.stores ADD COLUMN welcome_points integer DEFAULT 100;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'stores' AND column_name = 'primary_color'
+  ) THEN
+    ALTER TABLE public.stores ADD COLUMN primary_color text DEFAULT '#D4AF37';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'stores' AND column_name = 'plan'
+  ) THEN
+    ALTER TABLE public.stores ADD COLUMN plan text DEFAULT 'basic';
+  END IF;
+END $$;
+
+-- Seed super admin user and demo store (matching actual database schema)
+INSERT INTO public.users (id, telegram_id, username, full_name, photo_url, language_code, is_super_admin, role, created_at, updated_at)
+VALUES ('b7849646-d726-4ece-ab01-f6180d99f8bd', 1203654887, 'SaadMohammedMansour', 'ساعد محمد', 'https://t.me/i/userpic/320/vaEmCb4JhMM_i58csiaO0WR_j7EmajVRj1lcKxuUrWs.svg', 'ar', true, 'super_admin', now(), now())
+ON CONFLICT (telegram_id) DO UPDATE SET is_super_admin = true;
+
+INSERT INTO public.stores (id, slug, name, owner_email, category, points_rate, welcome_points, primary_color, plan, is_active, created_at, updated_at)
+VALUES ('11111111-1111-1111-1111-111111111111', 'store-alpha', 'متجر التجميع', 'saad@example.com', 'متجر عام', 1, 100, '#D4AF37', 'basic', true, now(), now())
 ON CONFLICT (slug) DO NOTHING;
 
--- =============================================
--- ROW LEVEL SECURITY
--- =============================================
-
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stores ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_store_memberships ENABLE ROW LEVEL SECURITY;
-ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE offers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE redemptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE products ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow anon select users" ON users FOR SELECT USING (true);
-CREATE POLICY "Allow anon select stores" ON stores FOR SELECT USING (true);
-CREATE POLICY "Allow anon select memberships" ON user_store_memberships FOR SELECT USING (true);
-CREATE POLICY "Allow anon select transactions" ON transactions FOR SELECT USING (true);
-CREATE POLICY "Allow anon select offers" ON offers FOR SELECT USING (true);
-CREATE POLICY "Allow anon select products" ON products FOR SELECT USING (true);
-CREATE POLICY "Allow anon select redemptions" ON redemptions FOR SELECT USING (true);
-
-CREATE POLICY "Allow anon insert users" ON users FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon insert stores" ON stores FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon insert offers" ON offers FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon insert products" ON products FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon insert memberships" ON user_store_memberships FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon insert transactions" ON transactions FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anon insert redemptions" ON redemptions FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "Allow anon update users" ON users FOR UPDATE USING (true);
-CREATE POLICY "Allow anon update stores" ON stores FOR UPDATE USING (true);
-CREATE POLICY "Allow anon update memberships" ON user_store_memberships FOR UPDATE USING (true);
+-- Add super admin to the store as owner
+INSERT INTO public.user_store_memberships (user_id, store_id, role, points, tier, joined_at)
+VALUES ('b7849646-d726-4ece-ab01-f6180d99f8bd', '11111111-1111-1111-1111-111111111111', 'owner', 0, 'bronze', now())
+ON CONFLICT (user_id, store_id) DO NOTHING;
