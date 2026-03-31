@@ -100,11 +100,11 @@ export default function CustomerDetail() {
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="bg-[#161616] rounded-lg p-3">
             <p className="text-[#888888] text-xs">النقاط</p>
-            <p className="text-[#D4AF37] text-xl font-bold">{membership.points?.toLocaleString()}</p>
+            <p className="text-[#D4AF37] text-xl font-bold">{(membership?.points ?? 0).toLocaleString()}</p>
           </div>
           <div className="bg-[#161616] rounded-lg p-3">
             <p className="text-[#888888] text-xs">إجمالي الإنفاق</p>
-            <p className="text-[#f0f0f0] text-xl font-bold">{membership.total_spent?.toLocaleString()} دج</p>
+            <p className="text-[#f0f0f0] text-xl font-bold">{(membership?.total_spent ?? 0).toLocaleString()} دج</p>
           </div>
           <div className="bg-[#161616] rounded-lg p-3">
             <p className="text-[#888888] text-xs">عدد الزيارات</p>
