@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useDashboardStore } from '../store/dashboardStore'
 import { subDays } from 'date-fns'
+import { Send, Image, Link as LinkIcon, Users, ChevronDown } from 'lucide-react'
 
 export default function Notifications() {
   const { store } = useDashboardStore()
@@ -17,7 +18,6 @@ export default function Notifications() {
   const [sending, setSending] = useState(false)
   const [result,  setResult]  = useState(null)
 
-  // Recipient count estimation
   const { data: recipientCount } = useQuery({
     queryKey: ['notif-count', store?.id, form.target, form.target_tier],
     queryFn: async () => {
@@ -38,10 +38,11 @@ export default function Notifications() {
     if (!form.message) return
     setSending(true)
     try {
-      const { data } = await supabase.functions.invoke('send-notification', {
+      const { data, error } = await supabase.functions.invoke('send-notification', {
         body: { store_id: store.id, ...form }
       })
-      setResult(data)
+      if (error) throw error
+      setResult({ success: true, ...data })
     } catch (err) {
       setResult({ error: err.message })
     }
@@ -49,53 +50,60 @@ export default function Notifications() {
   }
 
   return (
-    <div className="page p-4 lg:p-6 max-w-2xl mx-auto">
-      <div className="page-header mb-6">
-        <h1 className="text-xl font-bold text-[#f0f0f0]">إرسال إشعار</h1>
+    <div className="space-y-6 max-w-2xl mx-auto pb-24">
+      <div className="text-right">
+        <h1 className="text-2xl font-black text-text tracking-tight">إرسال إشعار</h1>
+        <p className="text-sm text-muted font-medium">أرسل عروضاً وتحديثات لزبائنك عبر Telegram</p>
       </div>
 
-      <div className="bg-[#1e1e1e] rounded-xl p-6 border border-[#2a2a2a] space-y-5">
+      <div className="bg-white rounded-3xl p-6 border border-border shadow-soft space-y-5">
         {/* Message */}
-        <div>
-          <label className="block text-[#f0f0f0] font-medium mb-2">نص الإشعار *</label>
+        <div className="space-y-2 text-right">
+          <label className="text-xs font-black text-muted tracking-widest px-1">نص الإشعار *</label>
           <textarea
             value={form.message}
             onChange={e => setForm(f => ({...f, message: e.target.value}))}
             placeholder="اكتب رسالتك هنا..."
             rows={4}
-            className="w-full bg-[#161616] border border-[#2a2a2a] rounded-lg px-4 py-3 text-[#f0f0f0] placeholder-[#888888] focus:outline-none focus:border-[#D4AF37] resize-none"
+            className="w-full bg-surface border border-border rounded-2xl px-4 py-3 text-text font-medium placeholder-muted focus:outline-none focus:border-accent resize-none"
           />
         </div>
 
         {/* Image URL */}
-        <div>
-          <label className="block text-[#f0f0f0] font-medium mb-2">رابط صورة (اختياري)</label>
+        <div className="space-y-2 text-right">
+          <label className="text-xs font-black text-muted tracking-widest px-1 flex items-center gap-2">
+            <Image size={14} />
+            رابط صورة (اختياري)
+          </label>
           <input
             value={form.image_url}
             onChange={e => setForm(f => ({...f, image_url: e.target.value}))}
             placeholder="https://..."
-            className="w-full bg-[#161616] border border-[#2a2a2a] rounded-lg px-4 py-3 text-[#f0f0f0] placeholder-[#888888] focus:outline-none focus:border-[#D4AF37]"
+            className="w-full bg-surface border border-border rounded-2xl px-4 py-3 text-text font-medium placeholder-muted focus:outline-none focus:border-accent"
           />
         </div>
 
         {/* Target audience */}
-        <div>
-          <label className="block text-[#f0f0f0] font-medium mb-2">الجمهور</label>
+        <div className="space-y-3 text-right">
+          <label className="text-xs font-black text-muted tracking-widest px-1 flex items-center gap-2">
+            <Users size={14} />
+            الجمهور المستهدف
+          </label>
           <div className="space-y-2">
             {[
               { value: 'all',      label: 'كل الأعضاء' },
               { value: 'tier',     label: 'فئة محددة' },
-              { value: 'inactive', label: 'غير نشطين 60+ يوم' },
+              { value: 'inactive', label: 'غير نشطين (60+ يوم)' },
             ].map(opt => (
-              <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+              <label key={opt.value} className="flex items-center justify-end gap-3 cursor-pointer p-3 rounded-2xl border border-border hover:border-accent hover:bg-surface transition-all">
+                <span className="text-text font-bold text-sm">{opt.label}</span>
                 <input 
                   type="radio" 
                   value={opt.value}
                   checked={form.target === opt.value}
                   onChange={() => setForm(f => ({...f, target: opt.value}))}
-                  className="accent-[#D4AF37]"
+                  className="accent-accent"
                 />
-                <span className="text-[#f0f0f0]">{opt.label}</span>
               </label>
             ))}
           </div>
@@ -103,54 +111,68 @@ export default function Notifications() {
 
         {/* Tier selector */}
         {form.target === 'tier' && (
-          <div>
-            <label className="block text-[#888888] text-sm mb-2">اختر الفئة</label>
+          <div className="space-y-2 text-right relative">
+            <label className="text-xs font-black text-muted tracking-widest px-1">اختر الفئة</label>
             <select 
               value={form.target_tier}
               onChange={e => setForm(f => ({...f, target_tier: e.target.value}))}
-              className="w-full bg-[#161616] border border-[#2a2a2a] rounded-lg px-4 py-3 text-[#f0f0f0] focus:outline-none focus:border-[#D4AF37]"
+              className="w-full bg-surface border border-border rounded-2xl px-4 py-3 text-text font-bold focus:outline-none focus:border-accent appearance-none"
             >
               {['bronze','silver','gold','platinum'].map(t => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>{t.toUpperCase()}</option>
               ))}
             </select>
+            <ChevronDown className="absolute left-4 bottom-4 text-muted pointer-events-none" size={16} />
           </div>
         )}
 
         {/* CTA URL */}
-        <div>
-          <label className="block text-[#f0f0f0] font-medium mb-2">رابط CTA (اختياري)</label>
+        <div className="space-y-2 text-right">
+          <label className="text-xs font-black text-muted tracking-widest px-1 flex items-center gap-2">
+            <LinkIcon size={14} />
+            رابط CTA (اختياري)
+          </label>
           <input
             value={form.cta_url}
             onChange={e => setForm(f => ({...f, cta_url: e.target.value}))}
-            placeholder="رابط يفتح عند الضغط"
-            className="w-full bg-[#161616] border border-[#2a2a2a] rounded-lg px-4 py-3 text-[#f0f0f0] placeholder-[#888888] focus:outline-none focus:border-[#D4AF37]"
+            placeholder="رابط يفتح عند الضغط على الزر"
+            className="w-full bg-surface border border-border rounded-2xl px-4 py-3 text-text font-medium placeholder-muted focus:outline-none focus:border-accent"
           />
         </div>
 
         {/* Summary */}
-        <div className="bg-[#161616] rounded-lg p-4 text-center">
-          <p className="text-[#888888]">
-            سيصل الإشعار إلى: <strong className="text-[#D4AF37]">{recipientCount ?? '...'}</strong> عضو
+        <div className="bg-surface rounded-2xl p-4 text-center border border-border">
+          <p className="text-muted text-sm font-medium">
+            سيصل الإشعار إلى: <strong className="text-accent font-black">{recipientCount ?? '...'}</strong> عضو
           </p>
         </div>
 
         {/* Result */}
         {result && (
-          <div className={`rounded-lg p-4 ${
-            result.error ? 'bg-[#ef444420] text-[#ef4444]' : 'bg-[#22c55e20] text-[#22c55e]'
+          <div className={`rounded-2xl p-4 text-right ${
+            result.error ? 'bg-red-50 border border-red-100 text-red-600' : 'bg-green-50 border border-green-100 text-green-600'
           }`}>
-            {result.error ?? `✅ أُرسل بنجاح`}
+            {result.error 
+              ? `❌ خطأ: ${result.error}`
+              : `✅ أُرسل بنجاح إلى ${result.sent} عضو${result.failed ? ` (${result.failed} فشل)` : ''}`
+            }
           </div>
         )}
 
         {/* Send button */}
         <button 
-          className="w-full bg-[#D4AF37] text-black py-3 rounded-xl font-semibold hover:bg-[#c4a02e] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-accent text-white py-4 rounded-2xl font-black text-sm shadow-soft shadow-accent/20 hover:bg-accent-dark transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           onClick={send}
           disabled={!form.message || sending}
         >
-          {sending ? 'جاري الإرسال...' : `إرسال للـ ${recipientCount ?? '...'} عضو`}
+          {sending ? (
+            'جاري الإرسال...'
+          ) : (
+            <>
+              <Send size={18} />
+              إرسال للـ {recipientCount ?? '...'} عضو
+            </>
+          )}
         </button>
       </div>
     </div>
