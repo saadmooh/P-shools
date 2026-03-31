@@ -92,9 +92,7 @@ const useUserStore = create((set, get) => ({
         if (createErr) throw createErr
         user = created
 
-        if (storeSlug === 'store-alpha') {
-          await seedStoreAlphaData(store.id, user.id)
-        }
+        await seedStoreAlphaData(store.id, user.id)
       }
 
       // 3. Get or create membership
@@ -208,8 +206,8 @@ const useUserStore = create((set, get) => ({
         },
         store: {
           id: '11111111-1111-1111-1111-111111111111',
-          slug: 'store-alpha',
-          name: 'متجر التجميع',
+          slug: storeSlug,
+          name: getStoreName(),
           primary_color: '#D4AF37',
           tier_config: {
             bronze: { min: 0, max: 999 },
