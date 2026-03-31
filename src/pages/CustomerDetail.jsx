@@ -6,13 +6,16 @@ import { supabase } from '../lib/supabase'
 import { useDashboardStore } from '../store/dashboardStore'
 import { format, formatDistanceToNow } from 'date-fns'
 import { ar } from 'date-fns/locale'
+import { Shield, Gift, CreditCard, Tag, ChevronDown } from 'lucide-react'
 
 export default function CustomerDetail() {
   const { memberId } = useParams()
-  const { store } = useDashboardStore()
+  const { store, membership: userMembership } = useDashboardStore()
   const queryClient = useQueryClient()
   const [grantPts, setGrantPts] = useState('')
   const [grantNote, setGrantNote] = useState('')
+
+  const isOwner = userMembership?.role === 'owner'
 
   const { data: membership, refetch } = useQuery({
     queryKey: ['membership-detail', memberId],
@@ -40,7 +43,6 @@ export default function CustomerDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['membership-detail', memberId])
-      alert('تم تحديث الدور بنجاح')
     }
   })
 
@@ -91,143 +93,174 @@ export default function CustomerDetail() {
   }
 
   if (!membership) return (
-    <div className="p-4 text-center text-[#888888]">جاري التحميل...</div>
+    <div className="p-4 text-center text-muted">جاري التحميل...</div>
   )
 
   const u = membership.users
-  const TIER_COLORS = { bronze: '#CD7F32', silver: '#C0C0C0', gold: '#FFD700', platinum: '#E8E8E8' }
+  const TIER_COLORS = { 
+    bronze: 'text-[#CD7F32] bg-[#CD7F3210]', 
+    silver: 'text-[#64748b] bg-[#64748b10]', 
+    gold: 'text-[#D4AF37] bg-[#D4AF3710]', 
+    platinum: 'text-[#1e293b] bg-[#1e293b10]' 
+  }
 
   return (
-    <div className="page p-4 lg:p-6 max-w-3xl mx-auto pb-24">
+    <div className="space-y-6 max-w-3xl mx-auto pb-24">
       {/* Customer card */}
-      <div className="bg-[#1e1e1e] rounded-xl p-6 border border-[#2a2a2a] mb-6">
-        <div className="flex justify-between items-start mb-4">
+      <div className="bg-white rounded-3xl p-6 border border-border shadow-soft">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
           <div className="flex items-center gap-4">
             {u?.photo_url
-              ? <img src={u.photo_url} alt={u.full_name} className="w-16 h-16 rounded-full object-cover" />
-              : <div className="w-16 h-16 rounded-full bg-[#2a2a2a] flex items-center justify-center text-[#888888] text-xl">
+              ? <img src={u.photo_url} alt={u.full_name} className="w-16 h-16 rounded-2xl object-cover" />
+              : <div className="w-16 h-16 rounded-2xl bg-surface border border-border flex items-center justify-center text-muted text-xl font-bold">
                   {u?.full_name?.[0] ?? '?'}
                 </div>
             }
-            <div>
-              <h2 className="text-xl font-bold text-[#f0f0f0]">{u?.full_name}</h2>
-              <p className="text-[#888888]">@{u?.username ?? '—'}</p>
-              <p className="text-lg font-bold" style={{ color: TIER_COLORS[membership.tier] }}>
+            <div className="text-right">
+              <h2 className="text-xl font-black text-text">{u?.full_name}</h2>
+              <p className="text-muted text-sm font-medium">@{u?.username ?? '—'}</p>
+              <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-black uppercase ${TIER_COLORS[membership.tier] || 'bg-surface text-muted'}`}>
                 {membership.tier}
-              </p>
+              </span>
             </div>
           </div>
 
-          <div className="text-left">
-            <label className="block text-[10px] text-[#888888] mb-1">الدور الحالي</label>
-            <select
-              value={membership.role_id || ''}
-              onChange={(e) => updateRoleMutation.mutate(e.target.value)}
-              className="bg-[#2a2a2a] text-[#f0f0f0] text-sm rounded-lg px-2 py-1 border border-[#3a3a3a] focus:outline-none focus:border-[#D4AF37]"
-            >
-              <option value="" disabled>اختر دوراً</option>
-              {roles?.map(r => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </select>
-          </div>
+          {isOwner && (
+            <div className="text-right">
+              <label className="block text-xs font-black text-muted tracking-widest mb-2">الدور</label>
+              <div className="relative">
+                <select
+                  value={membership.role_id || ''}
+                  onChange={(e) => updateRoleMutation.mutate(e.target.value)}
+                  className="w-full bg-surface border border-border rounded-2xl px-4 py-3 text-text font-bold text-sm focus:outline-none focus:border-accent appearance-none"
+                >
+                  <option value="">اختر دوراً</option>
+                  {roles?.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" size={16} />
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="bg-[#161616] rounded-lg p-3">
-            <p className="text-[#888888] text-xs">النقاط</p>
-            <p className="text-[#D4AF37] text-xl font-bold">{(membership?.points ?? 0).toLocaleString()}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-surface rounded-2xl p-4 border border-border">
+            <div className="flex items-center gap-2 mb-1">
+              <Gift size={16} className="text-accent" />
+              <p className="text-muted text-[10px] font-black uppercase tracking-widest">النقاط</p>
+            </div>
+            <p className="text-2xl font-black text-accent">{(membership?.points ?? 0).toLocaleString()}</p>
           </div>
-          <div className="bg-[#161616] rounded-lg p-3">
-            <p className="text-[#888888] text-xs">إجمالي الإنفاق</p>
-            <p className="text-[#f0f0f0] text-xl font-bold">{(membership?.total_spent ?? 0).toLocaleString()} دج</p>
+          <div className="bg-surface rounded-2xl p-4 border border-border">
+            <div className="flex items-center gap-2 mb-1">
+              <CreditCard size={16} className="text-muted" />
+              <p className="text-muted text-[10px] font-black uppercase tracking-widest">الإنفاق</p>
+            </div>
+            <p className="text-2xl font-black text-text">{(membership?.total_spent ?? 0).toLocaleString()}</p>
+            <p className="text-[10px] text-muted font-bold">دج</p>
           </div>
-          <div className="bg-[#161616] rounded-lg p-3">
-            <p className="text-[#888888] text-xs">عدد الزيارات</p>
-            <p className="text-[#f0f0f0] text-xl font-bold">{membership.visit_count ?? 0}</p>
+          <div className="bg-surface rounded-2xl p-4 border border-border">
+            <div className="flex items-center gap-2 mb-1">
+              <Tag size={16} className="text-muted" />
+              <p className="text-muted text-[10px] font-black uppercase tracking-widest">الزيارات</p>
+            </div>
+            <p className="text-2xl font-black text-text">{membership.visit_count ?? 0}</p>
           </div>
-          <div className="bg-[#161616] rounded-lg p-3">
-            <p className="text-[#888888] text-xs">آخر شراء</p>
-            <p className="text-[#f0f0f0] text-sm">
+          <div className="bg-surface rounded-2xl p-4 border border-border">
+            <div className="flex items-center gap-2 mb-1">
+              <Shield size={16} className="text-muted" />
+              <p className="text-muted text-[10px] font-black uppercase tracking-widest">آخر شراء</p>
+            </div>
+            <p className="text-lg font-black text-text">
               {membership.last_purchase 
                 ? formatDistanceToNow(new Date(membership.last_purchase), { locale: ar })
-                : 'لا يوجد'}
+                : '—'}
             </p>
           </div>
         </div>
 
-        <p className="text-[#888888] text-sm">
+        <p className="text-muted text-sm font-medium mt-4 text-right">
           عضو منذ: {format(new Date(membership.joined_at), 'MMMM yyyy', { locale: ar })}
         </p>
       </div>
 
       {/* Grant points */}
-      <div className="bg-[#1e1e1e] rounded-xl p-4 border border-[#2a2a2a] mb-6">
-        <h3 className="text-[#f0f0f0] font-semibold mb-4">منح نقاط يدوياً</h3>
-        <div className="flex gap-2">
-          <input 
-            type="number"
-            value={grantPts}
-            onChange={e => setGrantPts(e.target.value)}
-            placeholder="عدد النقاط"
-            className="flex-1 bg-[#161616] border border-[#2a2a2a] rounded-lg px-4 py-2 text-[#f0f0f0] placeholder-[#888888] focus:outline-none focus:border-[#D4AF37]"
-          />
-          <input 
-            value={grantNote}
-            onChange={e => setGrantNote(e.target.value)}
-            placeholder="السبب"
-            className="flex-1 bg-[#161616] border border-[#2a2a2a] rounded-lg px-4 py-2 text-[#f0f0f0] placeholder-[#888888] focus:outline-none focus:border-[#D4AF37]"
-          />
+      <div className="bg-white rounded-3xl p-6 border border-border shadow-soft">
+        <h3 className="text-lg font-black text-text tracking-tight mb-4 text-right">منح نقاط يدوياً</h3>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 space-y-2">
+            <input 
+              type="number"
+              value={grantPts}
+              onChange={e => setGrantPts(e.target.value)}
+              placeholder="عدد النقاط"
+              className="w-full bg-surface border border-border rounded-2xl px-4 py-3 text-text font-bold focus:outline-none focus:border-accent text-right"
+            />
+            <input 
+              value={grantNote}
+              onChange={e => setGrantNote(e.target.value)}
+              placeholder="السبب (اختياري)"
+              className="w-full bg-surface border border-border rounded-2xl px-4 py-3 text-text font-medium focus:outline-none focus:border-accent text-right"
+            />
+          </div>
           <button 
             onClick={handleGrant}
             disabled={!grantPts || Number(grantPts) <= 0}
-            className="bg-[#D4AF37] text-black px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+            className="bg-accent text-white px-8 py-3 rounded-2xl font-black text-sm shadow-soft shadow-accent/20 hover:bg-accent-dark transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            منح
+            منح النقاط
           </button>
         </div>
       </div>
 
       {/* Transaction history */}
-      <div className="bg-[#1e1e1e] rounded-xl p-4 border border-[#2a2a2a] mb-6">
-        <h3 className="text-[#f0f0f0] font-semibold mb-4">سجل المعاملات</h3>
-        <div className="space-y-2">
+      <div className="bg-white rounded-3xl p-6 border border-border shadow-soft">
+        <h3 className="text-lg font-black text-text tracking-tight mb-4 text-right">سجل المعاملات</h3>
+        <div className="space-y-3">
           {txHistory?.map(tx => (
-            <div key={tx.id} className="flex justify-between items-center py-2 border-b border-[#2a2a2a] last:border-0">
-              <div>
-                <p className="text-[#f0f0f0] text-sm">{tx.description ?? tx.type}</p>
-                <p className="text-[#888888] text-xs">
+            <div key={tx.id} className="flex justify-between items-center p-3 rounded-2xl bg-surface border border-border">
+              <div className="text-right">
+                <p className="text-text text-sm font-bold">{tx.description ?? tx.type}</p>
+                <p className="text-muted text-[10px] font-medium">
                   {format(new Date(tx.created_at), 'dd/MM/yyyy HH:mm')}
                 </p>
               </div>
-              <p className={tx.points > 0 ? 'text-[#22c55e] font-medium' : 'text-[#ef4444] font-medium'}>
+              <p className={`text-lg font-black ${tx.points > 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {tx.points > 0 ? '+' : ''}{tx.points}
               </p>
             </div>
           ))}
           {!txHistory?.length && (
-            <p className="text-[#888888] text-center py-4">لا توجد معاملات</p>
+            <div className="text-center py-8">
+              <CreditCard size={32} className="text-muted opacity-20 mx-auto mb-2" />
+              <p className="text-muted text-sm font-medium">لا توجد معاملات</p>
+            </div>
           )}
         </div>
       </div>
 
       {/* Coupons */}
-      <div className="bg-[#1e1e1e] rounded-xl p-4 border border-[#2a2a2a]">
-        <h3 className="text-[#f0f0f0] font-semibold mb-4">الكوبونات</h3>
-        <div className="space-y-2">
+      <div className="bg-white rounded-3xl p-6 border border-border shadow-soft">
+        <h3 className="text-lg font-black text-text tracking-tight mb-4 text-right">الكوبونات المستخدمة</h3>
+        <div className="space-y-3">
           {couponHistory?.map(r => (
-            <div key={r.id} className="flex justify-between items-center py-2 border-b border-[#2a2a2a] last:border-0">
-              <div>
-                <p className="text-[#f0f0f0] text-sm">{r.offers?.title}</p>
-                <p className="text-[#888888] text-xs">
+            <div key={r.id} className="flex justify-between items-center p-3 rounded-2xl bg-surface border border-border">
+              <div className="text-right">
+                <p className="text-text text-sm font-bold">{r.offers?.title}</p>
+                <p className="text-muted text-[10px] font-medium">
                   {format(new Date(r.created_at), 'dd/MM/yyyy')}
                 </p>
               </div>
-              <p className="text-[#D4AF37] text-sm">{r.points_spent} نقطة</p>
+              <p className="text-accent text-sm font-black">{r.points_spent} نقطة</p>
             </div>
           ))}
           {!couponHistory?.length && (
-            <p className="text-[#888888] text-center py-4">لا توجد كوبونات</p>
+            <div className="text-center py-8">
+              <Tag size={32} className="text-muted opacity-20 mx-auto mb-2" />
+              <p className="text-muted text-sm font-medium">لا توجد كوبونات</p>
+            </div>
           )}
         </div>
       </div>
