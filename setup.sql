@@ -42,7 +42,8 @@ create table public.users (
 -- Stores table
 create table public.stores (
   id uuid default uuid_generate_v4() primary key,
-  owner_email text,
+  owner_email text not null,
+  owner_username text not null,
   name text not null,
   slug text unique not null,
   description text,
@@ -193,7 +194,13 @@ create policy "Super admins can manage all stores" on public.stores
     where users.id = auth.uid() and users.is_super_admin = true
   ));
 create policy "Store owners can manage their stores" on public.stores
-  for all using (auth.jwt()->>'email' = owner_email);
+  for all using (
+    exists (
+      select 1 from public.users 
+      where users.username = stores.owner_username
+      and users.telegram_id = (auth.jwt()->>'telegram_id')::bigint
+    )
+  );
 
 -- Products policies - allow anonymous access
 create policy "Allow anon select products" on public.products for select using (true);
@@ -444,6 +451,85 @@ BEGIN
   ) THEN
     ALTER TABLE public.stores ADD COLUMN bot_username text;
   END IF;
+
+  -- Add owner_username to stores
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'stores' AND column_name = 'owner_username'
+  ) THEN
+    ALTER TABLE public.stores ADD COLUMN owner_username text NOT NULL DEFAULT '';
+    ALTER TABLE public.stores ALTER COLUMN owner_username DROP DEFAULT;
+  END IF;
+
+  -- Add missing columns to transactions
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'transactions' AND column_name = 'membership_id'
+  ) THEN
+    ALTER TABLE public.transactions ADD COLUMN membership_id uuid REFERENCES public.user_store_memberships(id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'transactions' AND column_name = 'note'
+  ) THEN
+    ALTER TABLE public.transactions ADD COLUMN note text;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'transactions' AND column_name = 'offer_id'
+  ) THEN
+    ALTER TABLE public.transactions ADD COLUMN offer_id uuid REFERENCES public.offers(id);
+  END IF;
+
+  -- Add missing columns to users
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'allows_write_to_pm'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN allows_write_to_pm boolean DEFAULT false;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'added_to_attachment_menu'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN added_to_attachment_menu boolean DEFAULT false;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'phone_number'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN phone_number text;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'raw_telegram_data'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN raw_telegram_data jsonb;
+  END IF;
+
+  -- Fix transactions.type constraint to include 'welcome'
+  BEGIN
+    ALTER TABLE public.transactions DROP CONSTRAINT IF EXISTS transactions_type_check;
+    ALTER TABLE public.transactions ADD CONSTRAINT transactions_type_check CHECK (type IN ('earn', 'redeem', 'adjust', 'expire', 'welcome'));
+  EXCEPTION WHEN undefined_object THEN
+    NULL;
+  END;
+
+  -- Fix RLS policy for stores to use owner_username
+  DROP POLICY IF EXISTS "Store owners can manage their stores" ON public.stores;
+  CREATE POLICY "Store owners can manage their stores" ON public.stores
+    FOR ALL USING (
+      EXISTS (
+        SELECT 1 FROM public.users 
+        WHERE users.username = stores.owner_username
+        AND users.telegram_id = (auth.jwt()->>'telegram_id')::bigint
+      )
+    );
 END $$;
 
 -- No seed data - all data is created when users join via Telegram

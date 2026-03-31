@@ -50,6 +50,7 @@ const useUserStore = create((set, get) => ({
             slug: storeSlug,
             name: getStoreName(),
             owner_email: 'saad@example.com',
+            owner_username: telegramData?.username || 'anonymous',
             bot_token: 'DEMO_' + storeSlug,
             bot_username: storeSlug + '_bot',
           })
