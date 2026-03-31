@@ -42,6 +42,7 @@ const useUserStore = create((set, get) => ({
 
       if (storeError) throw storeError
 
+      let storeJustCreated = false
       if (!store) {
         const { data: created, error: createErr } = await supabase
           .from('stores')
@@ -56,6 +57,7 @@ const useUserStore = create((set, get) => ({
           .single()
         if (createErr) throw createErr
         store = created
+        storeJustCreated = true
       }
 
       // 2. Get or create user
@@ -107,7 +109,8 @@ const useUserStore = create((set, get) => ({
       const isNewMembership = !membership
 
       if (!membership) {
-        const isOwner = user.username === 'SaadMohammedMansour'
+        const isOwner = storeJustCreated
+        console.log('[initUser] Creating new membership with welcome_points:', store.welcome_points || 100, 'role:', isOwner ? 'owner' : 'viewer')
         const { data: created, error: createErr } = await supabase
           .from('user_store_memberships')
           .insert({

@@ -9,6 +9,9 @@ export const getStoreSlug = () => {
   const parts = host.split('.')
   if (parts.length > 2) return parts[0]
 
+  // From env var
+  if (import.meta.env.VITE_STORE_SLUG) return import.meta.env.VITE_STORE_SLUG
+
   // Default fallback
   return 'store-alpha'
 }
