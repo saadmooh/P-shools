@@ -27,7 +27,7 @@ export async function seedDemoData() {
   const { data: store } = await supabase
     .from('stores')
     .select('id')
-    .eq('slug', 'demo-store')
+    .eq('slug', 'store-alpha')
     .maybeSingle()
 
   if (!store) {
