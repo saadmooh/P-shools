@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import useUserStore from './store/userStore'
@@ -28,29 +28,17 @@ import Settings from './pages/Settings'
 
 const queryClient = new QueryClient()
 
-function DashboardRouter() {
+function DashboardGuard() {
   const { loading, hasAccess, init } = useDashboardStore()
 
-  useEffect(() => { init() }, [init])
+  useEffect(() => { 
+    init() 
+  }, [init])
 
   if (loading) return <SplashScreen />
   if (!hasAccess) return <NoAccess />
 
-  return (
-    <Routes>
-      <Route path="/" element={<Layout />}>
-        <Route index element={<Overview />} />
-        <Route path="overview" element={<Overview />} />
-        <Route path="qr" element={<QRGenerator />} />
-        <Route path="products" element={<Products />} />
-        <Route path="offers" element={<Offers />} />
-        <Route path="customers" element={<CustomersPage />} />
-        <Route path="customers/:memberId" element={<CustomerDetail />} />
-        <Route path="notifications" element={<Notifications />} />
-        <Route path="settings" element={<Settings />} />
-      </Route>
-    </Routes>
-  )
+  return <Outlet />
 }
 
 function AppContent() {
@@ -82,25 +70,32 @@ function AppContent() {
 
   if (loading) return <SplashScreen />
 
-  if (location.pathname.startsWith('/dashboard') || location.pathname === '/dashboard') {
-    return <DashboardRouter />
-  }
-
-  const showBottomNav = user?.full_name && location.pathname !== '/scan'
+  const isDashboard = location.pathname.startsWith('/dashboard')
+  const showBottomNav = user?.full_name && location.pathname !== '/scan' && !isDashboard
 
   return (
     <div className="app-container min-h-screen bg-surface">
       <AnimatePresence mode="wait">
         <motion.div
-          key={location.pathname}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
+          key={isDashboard ? 'dashboard' : 'app'}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="pb-24"
         >
           <Routes>
-            <Route path="/" element={!user?.full_name ? <Onboarding /> : <Home />} />
+            {/* Customer App Routes */}
+            <Route path="/" element={
+              <motion.div 
+                key={location.pathname}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="pb-24"
+              >
+                {!user?.full_name ? <Onboarding /> : <Home />}
+              </motion.div>
+            } />
             <Route path="/scan" element={<Scanner />} />
             <Route path="/offers" element={<Offers />} />
             <Route path="/offers/:id" element={<OfferDetail />} />
@@ -108,6 +103,22 @@ function AppContent() {
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/history" element={<History />} />
             <Route path="/profile" element={<Profile />} />
+
+            {/* Merchant Dashboard Routes (Guarded) */}
+            <Route path="/dashboard" element={<DashboardGuard />}>
+              <Route element={<Layout />}>
+                <Route index element={<Overview />} />
+                <Route path="overview" element={<Overview />} />
+                <Route path="qr" element={<QRGenerator />} />
+                <Route path="products" element={<Products />} />
+                <Route path="offers" element={<Offers />} />
+                <Route path="customers" element={<CustomersPage />} />
+                <Route path="customers/:memberId" element={<CustomerDetail />} />
+                <Route path="notifications" element={<Notifications />} />
+                <Route path="settings" element={<Settings />} />
+              </Route>
+            </Route>
+
             <Route path="*" element={<Home />} />
           </Routes>
         </motion.div>
