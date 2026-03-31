@@ -287,3 +287,4 @@ DROP TRIGGER IF EXISTS update_tier_trigger ON public.user_store_memberships;
 CREATE TRIGGER update_tier_trigger
   AFTER UPDATE OF points ON public.user_store_memberships
   FOR EACH ROW EXECUTE FUNCTION public.update_user_tier();
+enha

@@ -1,30 +1,39 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import QRCode from 'qrcode.react'
+import { QRCodeCanvas } from 'qrcode.react'
 import { supabase } from '../lib/supabase'
 import { useDashboardStore } from '../store/dashboardStore'
 import { startOfDay } from 'date-fns'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const EXPIRY_SECONDS = 300
 
 export default function QRGenerator() {
   const { store } = useDashboardStore()
   const [amount, setAmount] = useState('')
-  const [phase, setPhase] = useState('input')
   const [qrToken, setQrToken] = useState(null)
   const [timeLeft, setTimeLeft] = useState(EXPIRY_SECONDS)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [status, setStatus] = useState('idle') // 'idle', 'active', 'expired'
   const timerRef = useRef(null)
 
   const points = amount ? Math.floor(Number(amount) / 10) * (store?.points_rate ?? 1) : 0
 
   const generate = async () => {
     if (!amount || Number(amount) <= 0) return
+    setIsGenerating(true)
 
     const token = `QR-${store.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`
     const expiresAt = new Date(Date.now() + EXPIRY_SECONDS * 1000)
 
-    // Insert pending transaction (no user_id yet)
-    const { error } = await supabase.from('transactions').insert({
+    // Optimistic Update: Show QR directly without waiting for DB
+    setQrToken(token)
+    setStatus('active')
+    setTimeLeft(EXPIRY_SECONDS)
+    setIsGenerating(false)
+
+    // Background Insert
+    supabase.from('transactions').insert({
       store_id: store.id,
       type: 'earn',
       points,
@@ -32,39 +41,38 @@ export default function QRGenerator() {
       qr_token: token,
       expires_at: expiresAt.toISOString(),
       note: 'Generated QR Code',
+    }).then(({ error }) => {
+      if (error) { 
+        console.error('Error recording QR transaction:', error)
+        // In a real app, we might want to invalidate the QR if the DB fails
+      }
     })
-
-    if (error) { 
-      console.error('Error generating QR transaction:', error)
-      return 
-    }
-
-    setQrToken(token)
-    setTimeLeft(EXPIRY_SECONDS)
-    setPhase('qr')
   }
 
   useEffect(() => {
-    if (phase !== 'qr') return
-    clearInterval(timerRef.current)
+    if (status !== 'active') return
+    
+    if (timerRef.current) clearInterval(timerRef.current)
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timerRef.current)
-          setPhase('expired')
+          setStatus('expired')
           return 0
         }
         return prev - 1
       })
     }, 1000)
+    
     return () => clearInterval(timerRef.current)
-  }, [phase])
+  }, [status])
 
   const reset = () => {
-    clearInterval(timerRef.current)
+    if (timerRef.current) clearInterval(timerRef.current)
     setAmount('')
     setQrToken(null)
-    setPhase('input')
+    setStatus('idle')
+    setTimeLeft(EXPIRY_SECONDS)
   }
 
   const formatTime = (s) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
@@ -83,93 +91,119 @@ export default function QRGenerator() {
     enabled: !!store?.id
   })
 
-  if (phase === 'input') return (
-    <div className="qr-page p-4 lg:p-6 max-w-md mx-auto">
-      <h2 className="text-xl font-bold text-[#f0f0f0] mb-6 text-center">قيمة الطلبية</h2>
+  return (
+    <div className="qr-page p-4 lg:p-6 max-w-md mx-auto pb-24 text-right">
+      <h2 className="text-xl font-bold text-[#f0f0f0] mb-6 text-center tracking-tight">توليد نقاط البيع</h2>
       
-      <div className="bg-[#1e1e1e] rounded-xl p-6 border border-[#2a2a2a] mb-6">
+      {/* Input Card */}
+      <div className="bg-[#1e1e1e] rounded-2xl p-6 border border-[#2a2a2a] shadow-xl mb-6">
         <div className="amount-wrapper flex flex-col items-center">
-          <input
-            type="number"
-            inputMode="numeric"
-            value={amount}
-            onChange={e => setAmount(e.target.value)}
-            placeholder="0"
-            className="text-4xl font-bold text-center bg-transparent border-b-2 border-[#2a2a2a] text-[#f0f0f0] pb-2 w-full focus:outline-none focus:border-[#D4AF37]"
-            autoFocus
-          />
-          <span className="text-[#888888] text-lg mt-2">دج</span>
+          <label className="text-xs text-[#888888] uppercase tracking-widest mb-2">قيمة الطلبية</label>
+          <div className="relative w-full">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              disabled={status === 'active'}
+              placeholder="0"
+              className="text-5xl font-black text-center bg-transparent border-b-2 border-[#2a2a2a] text-[#f0f0f0] pb-4 w-full focus:outline-none focus:border-[#D4AF37] transition-colors disabled:opacity-50 text-right"
+              autoFocus
+            />
+            <span className="absolute left-0 bottom-4 text-[#888888] font-bold">دج</span>
+          </div>
         </div>
         
-        {points > 0 && (
-          <p className="text-center text-[#888888] mt-4">
-            سيكسب الزبون: <strong className="text-[#D4AF37]">{points} نقطة</strong>
-          </p>
-        )}
-        
-        <button
-          className="w-full mt-6 bg-[#D4AF37] text-black py-3 rounded-xl font-semibold hover:bg-[#c4a02e] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={generate}
-          disabled={!amount || Number(amount) <= 0}
-        >
-          توليد QR
-        </button>
+        <div className="flex justify-between items-center mt-6">
+          <div className="text-sm text-[#888888]">
+            نقاط الزبون: <span className="text-[#D4AF37] font-bold">{points}</span>
+          </div>
+          {status === 'idle' ? (
+            <button
+              className="bg-[#D4AF37] text-black px-8 py-3 rounded-xl font-black hover:bg-[#c4a02e] transition-all transform active:scale-95 disabled:opacity-50"
+              onClick={generate}
+              disabled={!amount || Number(amount) <= 0 || isGenerating}
+            >
+              توليد QR
+            </button>
+          ) : (
+            <button
+              className="text-[#888888] hover:text-[#f0f0f0] text-sm underline"
+              onClick={reset}
+            >
+              إلغاء وإعادة تعيين
+            </button>
+          )}
+        </div>
       </div>
 
-      {todayTx?.length > 0 && (
-        <div className="bg-[#1e1e1e] rounded-xl p-4 border border-[#2a2a2a]">
-          <h4 className="text-[#f0f0f0] font-semibold mb-3">عمليات اليوم</h4>
-          <div className="space-y-2">
+      {/* QR Code Section */}
+      <AnimatePresence>
+        {status !== 'idle' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+            animate={{ opacity: 1, height: 'auto', scale: 1 }}
+            exit={{ opacity: 0, height: 0, scale: 0.95 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white rounded-3xl p-8 flex flex-col items-center shadow-2xl relative">
+              {status === 'expired' && (
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-3xl p-6 text-center">
+                  <span className="text-5xl mb-4">⌛</span>
+                  <h3 className="text-white text-xl font-bold mb-2">انتهت الصلاحية</h3>
+                  <button 
+                    onClick={reset}
+                    className="bg-[#D4AF37] text-black px-6 py-2 rounded-lg font-bold"
+                  >
+                    توليد جديد
+                  </button>
+                </div>
+              )}
+
+              <div className="relative p-2 bg-white rounded-xl border-4 border-gray-100">
+                <QRCodeCanvas value={qrToken} size={240} level="H" includeMargin={false} />
+              </div>
+
+              <div className="mt-6 text-center">
+                <div className={`text-3xl font-mono font-black mb-1 ${timeLeft < 60 ? 'text-red-500 animate-pulse' : 'text-black'}`}>
+                  {formatTime(timeLeft)}
+                </div>
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-tighter">
+                  صالح لمرة واحدة • {Number(amount).toLocaleString()} دج
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Recent Activity */}
+      {todayTx?.length > 0 && status === 'idle' && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-8"
+        >
+          <h4 className="text-[#888888] text-xs font-bold uppercase mb-4 px-2 text-right">عمليات اليوم الأخيرة</h4>
+          <div className="space-y-3">
             {todayTx.map((tx, i) => (
-              <div key={i} className="flex justify-between text-sm">
-                <span className="text-[#888888]">{tx.users?.full_name ?? '—'}</span>
-                <div className="flex gap-3">
-                  <span className="text-[#22c55e]">+{tx.points} نقطة</span>
-                  <span className="text-[#888888]">{(tx.amount ?? 0).toLocaleString()} دج</span>
+              <div key={i} className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-4 flex justify-between items-center flex-row-reverse">
+                <div className="flex items-center gap-3 flex-row-reverse">
+                  <div className="w-8 h-8 rounded-full bg-[#2a2a2a] flex items-center justify-center text-sm">👤</div>
+                  <div className="text-right">
+                    <p className="text-white text-sm font-bold">{tx.users?.full_name ?? 'زبون جديد'}</p>
+                    <p className="text-[#888888] text-[10px]">{new Date(tx.created_at).toLocaleTimeString('ar-DZ')}</p>
+                  </div>
+                </div>
+                <div className="text-left">
+                  <p className="text-[#22c55e] text-sm font-black">+{tx.points} نقطة</p>
+                  <p className="text-[#888888] text-[10px]">{(tx.amount ?? 0).toLocaleString()} دج</p>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
-    </div>
-  )
-
-  if (phase === 'qr') return (
-    <div className="qr-page p-4 lg:p-6 max-w-md mx-auto flex flex-col items-center">
-      <div className="bg-white p-4 rounded-xl mb-4">
-        <QRCode value={qrToken} size={280} level="H" includeMargin />
-      </div>
-      
-      <div className={`text-2xl font-bold mb-2 ${timeLeft < 60 ? 'text-[#ef4444]' : 'text-[#f0f0f0]'}`}>
-        ⏱ {formatTime(timeLeft)}
-      </div>
-      
-      <p className="text-[#f0f0f0] text-lg mb-1">
-        {Number(amount).toLocaleString()} دج — {points} نقطة
-      </p>
-      <p className="text-[#888888] text-sm mb-6">صالح لمرة واحدة فقط</p>
-      
-      <button 
-        className="bg-[#D4AF37] text-black px-6 py-3 rounded-xl font-semibold hover:bg-[#c4a02e] transition-colors"
-        onClick={reset}
-      >
-        توليد جديد
-      </button>
-    </div>
-  )
-
-  return (
-    <div className="qr-page p-4 lg:p-6 max-w-md mx-auto flex flex-col items-center justify-center min-h-[50vh]">
-      <div className="text-5xl mb-4">⌛</div>
-      <p className="text-[#f0f0f0] text-xl font-semibold mb-2">انتهت صلاحية الكود</p>
-      <p className="text-[#888888] mb-6">يرجى توليد كود جديد</p>
-      <button 
-        className="bg-[#D4AF37] text-black px-6 py-3 rounded-xl font-semibold hover:bg-[#c4a02e] transition-colors"
-        onClick={reset}
-      >
-        توليد جديد
-      </button>
     </div>
   )
 }

@@ -22,6 +22,7 @@ export default function BottomNav({ activePath = '/', onNavigate }) {
   // Filter items based on permissions
   const visibleItems = navItems.filter(item => {
     if (item.isDashboard) {
+      // Check for permission in the nested roles object
       return membership?.roles?.permissions?.can_access_dashboard === true
     }
     return true

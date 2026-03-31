@@ -6,6 +6,7 @@ import { useDashboardStore } from '../store/dashboardStore'
 import { subDays, format, startOfDay } from 'date-fns'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import StatCard from '../components/StatCard'
+import { Shield, AlertTriangle, ArrowRight } from 'lucide-react'
 
 export default function Overview() {
   const { store, membership } = useDashboardStore()
@@ -110,9 +111,9 @@ export default function Overview() {
       
       return [
         { name: 'Bronze',   value: counts.bronze,   color: '#CD7F32' },
-        { name: 'Silver',   value: counts.silver,   color: '#C0C0C0' },
-        { name: 'Gold',     value: counts.gold,     color: '#FFD700' },
-        { name: 'Platinum', value: counts.platinum, color: '#E8E8E8' },
+        { name: 'Silver',   value: counts.silver,   color: '#64748b' },
+        { name: 'Gold',     value: counts.gold,     color: '#D4AF37' },
+        { name: 'Platinum', value: counts.platinum, color: '#1e293b' },
       ]
     },
     enabled: !!store?.id
@@ -133,117 +134,144 @@ export default function Overview() {
   })
 
   return (
-    <div className="page p-4 lg:p-6 max-w-5xl mx-auto pb-24">
-      {/* Header */}
-      <div className="page-header mb-6 flex justify-between items-start">
+    <div className="space-y-6 max-w-6xl mx-auto">
+      {/* Welcome & Action Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl lg:text-2xl font-bold text-[#f0f0f0]">مرحباً، {store?.name}</h1>
-          <p className="text-sm text-[#888888]">{format(new Date(), 'EEEE، d MMMM yyyy')}</p>
+          <h1 className="text-2xl font-black text-text tracking-tight">مرحباً، {store?.name}</h1>
+          <p className="text-sm text-muted font-medium">{format(new Date(), 'EEEE، d MMMM yyyy')}</p>
         </div>
+        
         {isOwner && (
           <button
             onClick={() => navigate('/dashboard/roles')}
-            className="bg-[#2a2a2a] text-[#D4AF37] border border-[#3a3a3a] px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#333] transition-colors flex items-center gap-2"
+            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-border rounded-2xl text-sm font-bold text-text shadow-soft hover:bg-surface transition-all active:scale-95"
           >
-            <span>🛡️</span>
+            <Shield size={18} className="text-accent" />
             إدارة الصلاحيات
           </button>
         )}
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="إجمالي الأعضاء" value={stats?.totalMembers?.toLocaleString() ?? '—'} icon="👥" />
         <StatCard label="عمليات اليوم"   value={stats?.todayCount ?? '—'} icon="📊" />
         <StatCard label="مبيعات الشهر"   value={`${(stats?.monthTotal ?? 0).toLocaleString()} دج`} icon="💰" />
         <StatCard label="عروض مستخدمة"  value={stats?.activeOffers ?? '—'} icon="🎁" />
       </div>
 
-      {/* Chart */}
-      <div className="bg-[#1e1e1e] rounded-xl p-4 border border-[#2a2a2a] mb-6">
-        <h3 className="text-[#f0f0f0] font-semibold mb-4">المعاملات — آخر 14 يوم</h3>
-        <ResponsiveContainer width="100%" height={200}>
+      {/* Chart Section */}
+      <div className="bg-white rounded-3xl p-6 border border-border shadow-soft">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-black text-text tracking-tight">المعاملات — آخر 14 يوم</h3>
+          <div className="flex items-center gap-2 text-xs font-bold text-muted bg-surface px-3 py-1 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+            تحديث تلقائي
+          </div>
+        </div>
+        
+        <ResponsiveContainer width="100%" height={240}>
           <AreaChart data={chartData}>
             <defs>
               <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--accent, #D4AF37)" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="var(--accent, #D4AF37)" stopOpacity={0} />
+                <stop offset="5%" stopColor="var(--accent, #10b981)" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="var(--accent, #10b981)" stopOpacity={0} />
               </linearGradient>
             </defs>
             <Area 
               type="monotone" 
               dataKey="transactions" 
-              stroke="var(--accent, #D4AF37)" 
+              stroke="var(--accent, #10b981)" 
               fill="url(#areaGrad)" 
-              strokeWidth={2} 
+              strokeWidth={3} 
+              dot={{ r: 4, fill: 'var(--accent, #10b981)', strokeWidth: 2, stroke: '#fff' }}
+              activeDot={{ r: 6, strokeWidth: 0 }}
             />
-            <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#888888' }} />
-            <YAxis tick={{ fontSize: 11, fill: '#888888' }} />
+            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }} dy={10} />
+            <YAxis hide={true} />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #2a2a2a', borderRadius: 8 }}
-              labelStyle={{ color: '#f0f0f0' }}
+              contentStyle={{ backgroundColor: '#fff', border: 'none', borderRadius: 16, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}
+              labelStyle={{ fontWeight: 'bold', marginBottom: '4px', display: 'block' }}
+              itemStyle={{ color: 'var(--accent, #10b981)', fontWeight: 800, padding: 0 }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Two columns */}
-      <div className="grid lg:grid-cols-2 gap-4 mb-6">
+      <div className="grid lg:grid-cols-3 gap-6">
         {/* Tier distribution */}
-        <div className="bg-[#1e1e1e] rounded-xl p-4 border border-[#2a2a2a]">
-          <h3 className="text-[#f0f0f0] font-semibold mb-4">توزيع الفئات</h3>
-          <ResponsiveContainer width="100%" height={160}>
-            <PieChart>
-              <Pie 
-                data={tierData} 
-                dataKey="value" 
-                cx="50%" 
-                cy="50%" 
-                outerRadius={60}
-                label={({ name, value }) => `${name}: ${value}`}
-                labelLine={false}
-              >
-                {tierData?.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-              </Pie>
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #2a2a2a', borderRadius: 8 }}
-                formatter={(v, n) => [v + ' عضو', n]}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="flex flex-wrap gap-2 mt-2">
+        <div className="bg-white rounded-3xl p-6 border border-border shadow-soft lg:col-span-1 text-center">
+          <h3 className="text-lg font-black text-text tracking-tight mb-6 text-right">توزيع الفئات</h3>
+          <div className="flex justify-center">
+            <ResponsiveContainer width="100%" height={180}>
+              <PieChart>
+                <Pie 
+                  data={tierData} 
+                  dataKey="value" 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius={50}
+                  outerRadius={70}
+                  paddingAngle={5}
+                >
+                  {tierData?.map((entry, i) => <Cell key={i} fill={entry.color} cornerRadius={4} />)}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-2 mt-4">
             {tierData?.map(t => (
-              <div key={t.name} className="flex items-center gap-1 text-xs text-[#888888]">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
-                {t.name}: {t.value}
+              <div key={t.name} className="flex items-center justify-between text-xs font-bold text-muted">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: t.color }} />
+                  {t.name}
+                </div>
+                <span className="text-text">{t.value} عضو</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Recent transactions */}
-        <div className="bg-[#1e1e1e] rounded-xl p-4 border border-[#2a2a2a]">
-          <h3 className="text-[#f0f0f0] font-semibold mb-4">آخر العمليات</h3>
-          <div className="space-y-3">
+        <div className="bg-white rounded-3xl p-6 border border-border shadow-soft lg:col-span-2">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-black text-text tracking-tight">آخر العمليات</h3>
+            <button onClick={() => navigate('/dashboard/customers')} className="text-accent text-xs font-bold flex items-center gap-1 hover:underline">
+              عرض الكل <ArrowRight size={14} />
+            </button>
+          </div>
+          
+          <div className="space-y-4">
             {recentTx?.map(tx => (
-              <div key={tx.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {tx.users?.photo_url
-                    ? <img src={tx.users.photo_url} alt="" className="w-8 h-8 rounded-full object-cover" />
-                    : <div className="w-8 h-8 rounded-full bg-[#2a2a2a] flex items-center justify-center text-[#888888] text-xs">
-                        {tx.users?.full_name?.[0] ?? '?'}
-                      </div>
-                  }
-                  <span className="text-[#f0f0f0] text-sm">{tx.users?.full_name ?? 'غير معروف'}</span>
+              <div key={tx.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-surface transition-colors border border-transparent hover:border-border group">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    {tx.users?.photo_url
+                      ? <img src={tx.users.photo_url} alt="" className="w-10 h-10 rounded-xl object-cover" />
+                      : <div className="w-10 h-10 rounded-xl bg-surface flex items-center justify-center text-muted text-sm font-bold border border-border">
+                          {tx.users?.full_name?.[0] ?? '?'}
+                        </div>
+                    }
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full" />
+                  </div>
+                  <div className="text-right">
+                    <p className="text-text text-sm font-bold">{tx.users?.full_name ?? 'زبون جديد'}</p>
+                    <p className="text-muted text-[10px] font-medium">{format(new Date(tx.created_at), 'HH:mm')} • {tx.amount} دج</p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <p className="text-[#22c55e] text-sm font-medium">+{tx.points} نقطة</p>
-                  <p className="text-[#888888] text-xs">{(tx.amount ?? 0).toLocaleString()} دج</p>
+                <div className="text-left bg-green-50 text-green-600 px-3 py-1 rounded-full text-sm font-black">
+                  +{tx.points}
                 </div>
               </div>
             ))}
             {!recentTx?.length && (
-              <p className="text-[#888888] text-center py-4">لا توجد عمليات بعد</p>
+              <div className="text-center py-10">
+                <p className="text-muted text-sm font-medium">لا توجد عمليات بعد</p>
+              </div>
             )}
           </div>
         </div>
@@ -251,20 +279,29 @@ export default function Overview() {
 
       {/* Inactive customers warning */}
       {stats?.inactiveCount > 0 && (
-        <div className="bg-[#1e1e1e] rounded-xl p-4 border border-[#f59e0b] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">⚠️</span>
-            <p className="text-[#f0f0f0]">
-              {stats.inactiveCount} زبون لم يشترِ منذ أكثر من 60 يوماً
-            </p>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-orange-50 rounded-3xl p-5 border border-orange-100 flex flex-col md:flex-row md:items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-600">
+              <AlertTriangle size={24} />
+            </div>
+            <div className="text-right">
+              <p className="text-orange-900 font-bold">فرصة لإعادة التفاعل</p>
+              <p className="text-orange-700 text-sm font-medium">
+                {stats.inactiveCount} زبون لم يشتروا منذ أكثر من 60 يوماً. أرسل لهم عرضاً مخصصاً الآن!
+              </p>
+            </div>
           </div>
           <button 
             onClick={() => navigate('/dashboard/notifications')}
-            className="bg-[#D4AF37] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#c4a02e] transition-colors"
+            className="bg-orange-600 text-white px-6 py-3 rounded-2xl text-sm font-black shadow-soft hover:bg-orange-700 transition-all active:scale-95 whitespace-nowrap"
           >
-            إرسال عرض "نفتقدك"
+            إرسال تنبيه
           </button>
-        </div>
+        </motion.div>
       )}
     </div>
   )
