@@ -15,6 +15,8 @@ import Offers from './pages/Offers'
 import OfferDetail from './pages/OfferDetail'
 import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
+import ClientOffers from './pages/ClientOffers'
+import ClientProducts from './pages/ClientProducts'
 import History from './pages/History'
 import Profile from './pages/Profile'
 import Layout from './components/Layout'
@@ -98,9 +100,9 @@ function AppContent() {
               </motion.div>
             } />
             <Route path="/scan" element={<Scanner />} />
-            <Route path="/offers" element={<Offers />} />
+            <Route path="/offers" element={<ClientOffers />} />
             <Route path="/offers/:id" element={<OfferDetail />} />
-            <Route path="/products" element={<Products />} />
+            <Route path="/products" element={<ClientProducts />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/history" element={<History />} />
             <Route path="/profile" element={<Profile />} />
