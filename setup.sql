@@ -109,6 +109,7 @@ create table public.offers (
   title text not null,
   description text,
   type text not null check (type in ('discount', 'gift', 'double_points', 'flash', 'exclusive')),
+  target_type text default 'all' check (target_type in ('all', 'products')),
   discount_percent integer,
   points_cost integer default 0,
   min_tier text default 'bronze' check (min_tier in ('bronze', 'silver', 'gold', 'platinum')),
@@ -121,6 +122,15 @@ create table public.offers (
   is_active boolean default true,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
+);
+
+-- Offer-Products linking table
+create table public.offer_products (
+  id uuid default gen_random_uuid() primary key,
+  offer_id uuid references public.offers(id) on delete cascade not null,
+  product_id uuid references public.products(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  unique(offer_id, product_id)
 );
 
 -- User-Store Memberships table
@@ -207,6 +217,9 @@ alter table public.transactions enable row level security;
 alter table public.redemptions enable row level security;
 alter table public.promotions enable row level security;
 
+-- Offer products policies
+create policy "Allow public select offer_products" on public.offer_products for select using (true);
+
 -- Roles policies
 create policy "Allow public select roles" on public.roles for select using (true);
 
@@ -249,6 +262,8 @@ create index idx_user_store_memberships_store_id on public.user_store_membership
 create index idx_user_store_memberships_user_id on public.user_store_memberships(user_id);
 create index idx_transactions_store_id on public.transactions(store_id);
 create index idx_transactions_user_id on public.transactions(user_id);
+create index idx_offer_products_offer_id on public.offer_products(offer_id);
+create index idx_offer_products_product_id on public.offer_products(product_id);
 
 -- Function to update tier based on points
 create or replace function public.update_user_tier()

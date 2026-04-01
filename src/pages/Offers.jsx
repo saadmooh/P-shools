@@ -1,5 +1,5 @@
 // Offers - Offer management with create/edit form
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useDashboardStore } from '../store/dashboardStore'
@@ -180,10 +180,12 @@ export default function Offers() {
 }
 
 function OfferForm({ offer, storeId, onSave, onClose }) {
+  const { store } = useDashboardStore()
   const [form, setForm] = useState({
     title:            offer?.title            ?? '',
     description:      offer?.description      ?? '',
     type:             offer?.type             ?? 'discount',
+    target_type:      offer?.target_type      ?? 'all',
     discount_percent: offer?.discount_percent ?? '',
     points_cost:      offer?.points_cost      ?? 0,
     min_tier:         offer?.min_tier         ?? 'bronze',
@@ -194,6 +196,23 @@ function OfferForm({ offer, storeId, onSave, onClose }) {
     usage_limit:      offer?.usage_limit      ?? '',
     is_active:        offer?.is_active        ?? true,
   })
+  const [selectedProducts, setSelectedProducts] = useState([])
+
+  const { data: products } = useQuery({
+    queryKey: ['products', storeId],
+    queryFn: () => supabase.from('products').select('*').eq('store_id', storeId).order('name'),
+    enabled: !!storeId
+  })
+
+  const { data: offerProducts } = useQuery({
+    queryKey: ['offer_products', offer?.id],
+    queryFn: () => supabase.from('offer_products').select('product_id').eq('offer_id', offer.id).then(r => r.data?.map(p => p.product_id) ?? []),
+    enabled: !!offer?.id
+  })
+
+  useEffect(() => {
+    if (offerProducts?.length) setSelectedProducts(offerProducts)
+  }, [offerProducts])
 
   const handleSave = async () => {
     if (!form.title) return
@@ -205,10 +224,18 @@ function OfferForm({ offer, storeId, onSave, onClose }) {
       valid_from:       form.valid_from       || null,
       valid_until:      form.valid_until      || null,
     }
-    if (offer?.id) {
-      await supabase.from('offers').update({ ...payload, updated_at: new Date() }).eq('id', offer.id)
+    let offerId = offer?.id
+    if (offerId) {
+      await supabase.from('offers').update({ ...payload, updated_at: new Date() }).eq('id', offerId)
     } else {
-      await supabase.from('offers').insert({ ...payload, store_id: storeId })
+      const { data, error } = await supabase.from('offers').insert({ ...payload, store_id: storeId }).select().single()
+      if (error) throw error
+      offerId = data.id
+    }
+    if (form.target_type === 'products' && selectedProducts.length) {
+      await supabase.from('offer_products').delete().eq('offer_id', offerId)
+      const inserts = selectedProducts.map(productId => ({ offer_id: offerId, product_id: productId }))
+      await supabase.from('offer_products').insert(inserts)
     }
     onSave()
   }
@@ -271,6 +298,50 @@ function OfferForm({ offer, storeId, onSave, onClose }) {
                 <ChevronDown className="absolute left-4 bottom-4 text-muted pointer-events-none" size={16} />
               </div>
 
+              <div className="space-y-1.5 relative text-right">
+                <label className="text-xs font-black text-muted tracking-widest px-1">تطبيق على</label>
+                <select 
+                  value={form.target_type}
+                  onChange={e => setForm(f => ({...f, target_type: e.target.value}))}
+                  className="w-full bg-surface border border-border rounded-2xl px-4 py-3 text-text font-bold focus:outline-none focus:border-accent appearance-none transition-colors text-right"
+                >
+                  <option value="all">كل المنتجات</option>
+                  <option value="products">منتجات محددة</option>
+                </select>
+                <ChevronDown className="absolute left-4 bottom-4 text-muted pointer-events-none" size={16} />
+              </div>
+            </div>
+
+            {form.target_type === 'products' && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="space-y-2 text-right"
+              >
+                <label className="text-xs font-black text-muted tracking-widest px-1">اختر المنتجات</label>
+                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 bg-surface rounded-2xl border border-border">
+                  {products?.map(p => (
+                    <label key={p.id} className="flex items-center gap-2 p-2 bg-white rounded-xl cursor-pointer hover:bg-accent/5">
+                      <input 
+                        type="checkbox"
+                        checked={selectedProducts.includes(p.id)}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setSelectedProducts(ps => [...ps, p.id])
+                          } else {
+                            setSelectedProducts(ps => ps.filter(id => id !== p.id))
+                          }
+                        }}
+                        className="w-4 h-4 accent-accent"
+                      />
+                      <span className="text-xs font-medium truncate">{p.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            <div>
               {form.type === 'discount' ? (
                 <div className="space-y-1.5 text-right">
                   <label className="text-xs font-black text-muted tracking-widest px-1">نسبة التخفيض %</label>
