@@ -200,7 +200,7 @@ function OfferForm({ offer, storeId, onSave, onClose }) {
 
   const { data: products } = useQuery({
     queryKey: ['products', storeId],
-    queryFn: () => supabase.from('products').select('*').eq('store_id', storeId).order('name'),
+    queryFn: () => supabase.from('products').select('*').eq('store_id', storeId).order('name').then(r => r.data ?? []),
     enabled: !!storeId
   })
 
@@ -320,7 +320,7 @@ function OfferForm({ offer, storeId, onSave, onClose }) {
               >
                 <label className="text-xs font-black text-muted tracking-widest px-1">اختر المنتجات</label>
                 <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 bg-surface rounded-2xl border border-border">
-                  {products?.map(p => (
+                  {(products || []).map(p => (
                     <label key={p.id} className="flex items-center gap-2 p-2 bg-white rounded-xl cursor-pointer hover:bg-accent/5">
                       <input 
                         type="checkbox"
