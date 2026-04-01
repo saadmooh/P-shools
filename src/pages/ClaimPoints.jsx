@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { Hourglass, CheckCircle2, XCircle } from 'lucide-react'
 import useUserStore from '../store/userStore'
 import { supabase } from '../lib/supabase'

@@ -1,4 +1,5 @@
 import { QRCodeSVG } from 'qrcode.react'
+import { motion } from 'framer-motion'
 import { Printer } from 'lucide-react'
 
 export default function DoorQrDisplay({ storeSlug, storeName }) {

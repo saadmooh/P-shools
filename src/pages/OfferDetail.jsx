@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { QRCodeCanvas } from 'qrcode.react'
 import useUserStore from '../store/userStore'
-import { useOffer } from '../hooks/useOffers'
-import { Crown, Package, Lock } from 'lucide-react'
+import { useOfferWithProducts } from '../hooks/useOfferWithProducts'
+import OfferProductList from '../components/OfferProductList'
 
 const OFFER_COUPON_EXPIRY_SECONDS = 86400
 
@@ -12,7 +12,7 @@ export default function OfferDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user, redeemOffer } = useUserStore()
-  const { offer, loading: offerLoading, error: offerError } = useOffer(id)
+  const { offer, products, loading: offerLoading, error: offerError } = useOfferWithProducts(id)
   const [showConfirm, setShowConfirm] = useState(false)
   const [redeemed, setRedeemed] = useState(false)
   const [coupon, setCoupon] = useState(null)
@@ -160,6 +160,14 @@ export default function OfferDetail() {
               {offer.description}
             </p>
 
+            {offer.discount_percent && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+                <p className="text-red-600 font-bold text-center">
+                  🎉 {offer.discount_percent}% Discount
+                </p>
+              </div>
+            )}
+
             <div className="flex items-center justify-between text-sm mb-6">
               <div>
                 <p className="text-muted">Points Required</p>
@@ -172,6 +180,13 @@ export default function OfferDetail() {
                 </p>
               </div>
             </div>
+
+            {products && products.length > 0 && (
+              <div className="mb-6 border-t border-border pt-4">
+                <h3 className="text-sm font-bold text-text mb-3">المنتجات المشمولة</h3>
+                <OfferProductList products={products} />
+              </div>
+            )}
             
             <motion.button
               whileHover={{ scale: 1.02 }}
