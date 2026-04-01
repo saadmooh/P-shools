@@ -232,9 +232,10 @@ create policy "Allow public update roles" on public.roles for update using (true
 create policy "Allow public delete roles" on public.roles for delete using (true);
 
 -- Users policies
-create policy "Allow public insert roles" on public.roles for insert with check (true);
-create policy "Allow public update roles" on public.roles for update using (true);
-create policy "Allow public delete roles" on public.roles for delete using (true);
+create policy "Allow public select users" on public.users for select using (true);
+create policy "Allow public insert users" on public.users for insert with check (true);
+create policy "Allow public update users" on public.users for update using (true);
+create policy "Allow public delete users" on public.users for delete using (true);
 
 -- Stores policies
 create policy "Allow public select stores" on public.stores for select using (true);
