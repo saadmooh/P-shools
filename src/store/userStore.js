@@ -3,6 +3,11 @@ import { supabase } from '../lib/supabase'
 import { initializeDatabase, seedDemoData, seedStoreAlphaData } from '../lib/setup-db'
 import { getStoreSlug, getStoreName, getStartParam } from '../lib/store'
 
+// Helper to generate a 4-digit numeric coupon code
+const generateFourDigitCode = () => {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+};
+
 const useUserStore = create((set, get) => ({
   user: null,
   membership: null,
@@ -212,32 +217,6 @@ const useUserStore = create((set, get) => ({
         console.log('[initUser] User is already a member of this store.')
       }
 
-      // 4. Handle referral
-      if (isNewMembership && startParam?.startsWith('ref_')) {
-        const referralCode = startParam.replace('ref_', '')
-        console.log('[initUser] Step 4: Processing referral code:', referralCode)
-        const { data: referrerMem } = await supabase
-          .from('user_store_memberships')
-          .select('user_id, id, points')
-          .eq('referral_code', referralCode)
-          .eq('store_id', store.id)
-          .maybeSingle()
-
-        if (referrerMem) {
-          console.log('[initUser] Referrer found, awarding points')
-          await supabase.from('user_store_memberships').update({ points: referrerMem.points + 200 }).eq('id', referrerMem.id)
-          await supabase.from('user_store_memberships').update({ points: membership.points + 100 }).eq('id', membership.id)
-          await supabase.from('referrals').insert({
-            store_id: store.id,
-            referrer_id: referrerMem.user_id,
-            referred_id: user.id,
-          })
-
-          const { data: updated } = await supabase.from('user_store_memberships').select('*, roles(*)').eq('id', membership.id).single()
-          if (updated) membership = updated
-        }
-      }
-
       // Apply store accent color
       if (store.primary_color) {
         document.documentElement.style.setProperty('--accent', store.primary_color)
@@ -280,13 +259,67 @@ const useUserStore = create((set, get) => ({
     const { user, membership, store } = get()
     if (!user?.id || !membership?.id || !store?.id || membership.points < pointsCost) return false
     try {
-      const newPoints = membership.points - pointsCost
-      const { data: redemption } = await supabase.from('redemptions').insert({ user_id: user.id, store_id: store.id, offer_id: offerId }).select().single()
-      await supabase.from('user_store_memberships').update({ points: newPoints }).eq('id', membership.id)
-      await supabase.from('transactions').insert({ user_id: user.id, store_id: store.id, membership_id: membership.id, type: 'redeem', points: -pointsCost, offer_id: offerId, note: 'Used offer' })
-      set({ membership: { ...membership, points: newPoints } })
-      return redemption
-    } catch (err) { set({ error: err.message }); return null }
+      // Fetch products associated with the offer
+      let productIds = [];
+      const { data: products, error: productError } = await supabase
+        .from('products')
+        .select('id')
+        .neq('id', null)
+        .or(`id.in.(SELECT product_id FROM offer_products WHERE offer_id='${offerId}')`);
+
+      if (productError) {
+        console.error('Error fetching products for offer:', productError);
+        throw productError;
+      }
+      productIds = products ? products.map(p => p.id) : [];
+
+      // Generate 4-digit coupon code
+      const couponCode = generateFourDigitCode();
+
+      // Set coupon expiry (24 hours from now)
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      // Update user points
+      const newPoints = membership.points - pointsCost;
+      await supabase.from('user_store_memberships').update({ points: newPoints }).eq('id', membership.id);
+
+      // Insert redemption record
+      const { data: redemption, error: redemptionError } = await supabase
+        .from('redemptions')
+        .insert({
+          user_id: user.id,
+          store_id: store.id,
+          offer_id: offerId,
+          coupon_code: couponCode, // Store generated code
+          expires_at: expiresAt,   // Store expiry
+          products: productIds,    // Store linked product IDs
+        })
+        .select()
+        .single();
+
+      if (redemptionError) {
+        console.error('Error inserting redemption record:', redemptionError);
+        throw redemptionError;
+      }
+
+      // Create transaction record
+      await supabase.from('transactions').insert({
+        user_id: user.id,
+        store_id: store.id,
+        membership_id: membership.id,
+        type: 'redeem',
+        points: -pointsCost,
+        offer_id: offerId,
+        note: 'Used offer',
+      });
+
+      set({ membership: { ...membership, points: newPoints } });
+      return { coupon_code: couponCode }; // Return coupon_code as per plan
+    } catch (err) {
+      console.error('Error in redeemOffer:', err.message, err);
+      set({ error: err.message });
+      return null;
+    }
   },
 
   setError: (error) => set({ error }),

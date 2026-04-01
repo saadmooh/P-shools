@@ -28,6 +28,8 @@ import CustomerDetail from './pages/CustomerDetail'
 import Notifications from './pages/Notifications'
 import Settings from './pages/Settings'
 import RolesManagement from './pages/RolesManagement'
+import ClaimPoints from './pages/ClaimPoints'
+import ClaimSuccess from './pages/ClaimSuccess'
 
 const queryClient = new QueryClient()
 
@@ -106,6 +108,8 @@ function AppContent() {
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/history" element={<History />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/claim/:storeSlug" element={<ClaimPoints />} />
+            <Route path="/claim-success" element={<ClaimSuccess />} />
 
             {/* Merchant Dashboard Routes (Guarded) */}
             <Route path="/dashboard" element={<DashboardGuard />}>
