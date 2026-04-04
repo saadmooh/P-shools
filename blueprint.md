@@ -48,6 +48,7 @@ A comprehensive Education Management System (EMS) built as a Telegram Mini App. 
 - [x] Environment variables & Supabase client.
 - [x] Telegram SDK initialization & `useTelegram` hook.
 - [x] Basic routing & role-based redirection.
+- [x] Enhanced "Access Restricted" landing page for non-Telegram environments.
 
 ### **Phase 2: Core Academic & UI Skeleton (CURRENT)**
 - [ ] Create base UI components (`src/components/ui/`).

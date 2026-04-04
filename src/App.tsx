@@ -22,13 +22,37 @@ const MyPayroll = lazy(() => import('./features/teacher/pages/MyPayroll'));
 const SubmitJustification = lazy(() => import('./features/guardian/pages/SubmitJustification'));
 
 const Login = ({ error }: { error: string | null }) => (
-  <div className="p-4 flex flex-col items-center justify-center h-screen bg-[var(--tg-theme-bg-color)]">
-    <p className="text-center mb-4">Please open this app from Telegram.</p>
-    {error && (
-      <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm max-w-xs text-center">
-        Error: {error}
+  <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+    <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-2xl border border-slate-100 flex flex-col items-center">
+      <div className="w-20 h-20 bg-slate-900 rounded-2xl flex items-center justify-center mb-6 shadow-xl rotate-3">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
       </div>
-    )}
+      <h1 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">Access Restricted</h1>
+      <p className="text-slate-500 font-medium mb-8 leading-relaxed">
+        This portal is exclusively available as a <span className="text-slate-900 font-bold underline decoration-blue-500/30">Telegram Mini App</span>.
+      </p>
+      
+      <div className="bg-slate-50 rounded-2xl p-6 w-full mb-6 border border-slate-100">
+        <p className="text-slate-900 font-bold mb-1">Please open this app from Telegram</p>
+        <p className="text-slate-400 text-sm">Launch the bot to access your dashboard.</p>
+      </div>
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm w-full font-medium">
+          <span className="block font-bold mb-1 text-red-700">Authentication Error</span>
+          {error}
+        </div>
+      )}
+
+      <div className="mt-8 flex gap-2">
+        <div className="w-2 h-2 rounded-full bg-slate-200"></div>
+        <div className="w-2 h-2 rounded-full bg-slate-300 animate-pulse"></div>
+        <div className="w-2 h-2 rounded-full bg-slate-200"></div>
+      </div>
+    </div>
+    <p className="mt-8 text-slate-400 text-xs font-bold uppercase tracking-widest">EMS Portal System v1.0</p>
   </div>
 );
 const NotFound = () => <div className="p-4">404 - Page Not Found</div>;
