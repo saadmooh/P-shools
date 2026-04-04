@@ -13,39 +13,49 @@ import {
  * Enhanced hook for Telegram Mini App data and interactions.
  */
 export function useTelegram() {
-  // SDK Signals
+  // Safe signal access
   const initDataValue = useSignal(initData.state);
   const themeParamsValue = useSignal(themeParams.state);
   const viewportValue = useSignal(viewport.state);
 
   // 1. Basic User Info
   const user = useMemo(() => {
-    const u = initDataValue?.user;
-    if (!u) return null;
-    return {
-      id: u.id,
-      firstName: u.firstName,
-      lastName: u.lastName,
-      username: u.username,
-      languageCode: u.languageCode,
-      isPremium: u.isPremium,
-      photoUrl: u.photoUrl,
-      allowsWriteToPm: u.allowsWriteToPm,
-    };
+    try {
+      const u = initDataValue?.user;
+      if (!u) return null;
+      return {
+        id: u.id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        username: u.username,
+        languageCode: u.languageCode,
+        isPremium: u.isPremium,
+        photoUrl: u.photoUrl,
+        allowsWriteToPm: u.allowsWriteToPm,
+      };
+    } catch (e) {
+      return null;
+    }
   }, [initDataValue]);
 
   // 2. Session & Security Data
-  const sessionData = useMemo(() => ({
-    initDataRaw: initData.raw, // The string needed for server-side verification
-    hash: initDataValue?.hash,
-    authDate: initDataValue?.authDate,
-    queryId: initDataValue?.queryId,
-    startParam: initDataValue?.startParam,
-  }), [initDataValue]);
+  const sessionData = useMemo(() => {
+    try {
+      return {
+        initDataRaw: initData.raw,
+        hash: initDataValue?.hash,
+        authDate: initDataValue?.authDate,
+        queryId: initDataValue?.queryId,
+        startParam: initDataValue?.startParam,
+      };
+    } catch (e) {
+      return { initDataRaw: '', hash: '', authDate: new Date(), queryId: '', startParam: '' };
+    }
+  }, [initDataValue]);
 
   // 3. Device & Environment Data
   const deviceData = useMemo(() => {
-    const tg = window.Telegram?.WebApp;
+    const tg = typeof window !== 'undefined' ? window.Telegram?.WebApp : null;
     return {
       platform: tg?.platform || 'unknown',
       version: tg?.version || '0.0',
@@ -56,22 +66,26 @@ export function useTelegram() {
     };
   }, [viewportValue]);
 
-  // 4. Theme Data (CSS Variables Mapping)
+  // 4. Theme Data
   const themeData = useMemo(() => {
-    const p = themeParamsValue;
-    if (!p) return null;
-    return {
-      bgColor: p.bgColor,
-      textColor: p.textColor,
-      hintColor: p.hintColor,
-      linkColor: p.linkColor,
-      buttonColor: p.buttonColor,
-      buttonTextColor: p.buttonTextColor,
-      secondaryBgColor: p.secondaryBgColor,
-      headerBgColor: p.headerBgColor,
-      accentTextColor: p.accentTextColor,
-      destructiveTextColor: p.destructiveTextColor,
-    };
+    try {
+      const p = themeParamsValue;
+      if (!p) return null;
+      return {
+        bgColor: p.bgColor,
+        textColor: p.textColor,
+        hintColor: p.hintColor,
+        linkColor: p.linkColor,
+        buttonColor: p.buttonColor,
+        buttonTextColor: p.buttonTextColor,
+        secondaryBgColor: p.secondaryBgColor,
+        headerBgColor: p.headerBgColor,
+        accentTextColor: p.accentTextColor,
+        destructiveTextColor: p.destructiveTextColor,
+      };
+    } catch (e) {
+      return null;
+    }
   }, [themeParamsValue]);
 
   // 5. Actions & Utilities
@@ -84,12 +98,11 @@ export function useTelegram() {
   };
 
   const hapticFeedback = (type: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft' = 'medium') => {
-    window.Telegram?.WebApp?.HapticFeedback.impactOccurred(type);
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type);
   };
 
   const requestPhone = (): Promise<{ phone: string } | null> => {
     return new Promise((resolve) => {
-      // Version check or availability check
       if (window.Telegram?.WebApp?.requestContact) {
         window.Telegram.WebApp.requestContact((ok: boolean, response: any) => {
           if (ok && response?.contact) {
@@ -99,7 +112,6 @@ export function useTelegram() {
           }
         });
       } else {
-        console.warn('requestContact not available');
         resolve(null);
       }
     });
