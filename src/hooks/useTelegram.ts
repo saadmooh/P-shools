@@ -21,8 +21,14 @@ export function useTelegram() {
   // 1. Basic User Info
   const user = useMemo(() => {
     try {
+      console.log('--- EXTRACTING USER FROM INIT DATA ---');
+      console.log('initDataValue:', initDataValue);
       const u = initDataValue?.user;
-      if (!u) return null;
+      if (!u) {
+        console.warn('No user object found in initDataValue');
+        return null;
+      }
+      console.log('Successfully extracted user:', u);
       return {
         id: u.id,
         firstName: u.firstName,
@@ -34,6 +40,7 @@ export function useTelegram() {
         allowsWriteToPm: u.allowsWriteToPm,
       };
     } catch (e) {
+      console.error('Error during user extraction:', e);
       return null;
     }
   }, [initDataValue]);

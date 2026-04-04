@@ -15,14 +15,18 @@ export function useTelegramAuth() {
 
   useEffect(() => {
     async function authenticate() {
+      console.log('--- STARTING AUTHENTICATION ---');
       console.log('Telegram User Detected:', tgUser);
+      
       if (!tgUser) {
+        console.warn('No Telegram User found, skipping authentication.');
         setIsLoading(false);
         return;
       }
 
       try {
         setIsLoading(true);
+        console.log('Searching for existing user in Supabase with ID:', tgUser.id);
         
         // In a production environment, you should send sessionData.initDataRaw 
         // to your server for validation using the Bot Token.
@@ -32,11 +36,18 @@ export function useTelegramAuth() {
           .from('users')
           .select('*')
           .eq('id', tgUser.id.toString())
-          .single();
+          .maybeSingle();
+
+        if (fetchError) {
+          console.error('Supabase fetch error:', fetchError);
+          throw fetchError;
+        }
 
         if (existingUser) {
+          console.log('Existing user found:', existingUser);
           setAuth(existingUser, 'session-token');
         } else {
+          console.log('User not found. Auto-registering new user...');
           // Auto-register new users as guardians
           const fullName = [tgUser.firstName, tgUser.lastName].filter(Boolean).join(' ');
           
@@ -54,22 +65,32 @@ export function useTelegramAuth() {
             .select()
             .single();
 
-          if (createError) throw createError;
+          if (createError) {
+            console.error('Supabase registration error:', createError);
+            throw createError;
+          }
           if (createdUser) {
+            console.log('New user registered successfully:', createdUser);
             setAuth(createdUser, 'session-token');
           }
         }
       } catch (err: any) {
-        console.error('Auth error:', err);
+        console.error('--- AUTHENTICATION ERROR ---');
+        console.error('Error details:', err);
         setError(err.message || 'Failed to authenticate');
       } finally {
         setIsLoading(false);
+        console.log('--- AUTHENTICATION FINISHED ---');
       }
     }
 
     if (!authenticatedUser && tgUser) {
       authenticate();
     } else if (!tgUser) {
+      console.log('No Telegram user found and no authenticated user, showing login.');
+      setIsLoading(false);
+    } else {
+      console.log('User already authenticated:', authenticatedUser);
       setIsLoading(false);
     }
   }, [tgUser, sessionData, authenticatedUser, setAuth]);
