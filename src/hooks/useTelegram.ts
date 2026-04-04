@@ -21,8 +21,11 @@ export function useTelegram() {
   // Fallback to launch params if signals are empty
   const lp = useMemo(() => {
     try {
-      return retrieveLaunchParams();
+      const params = retrieveLaunchParams();
+      console.log('--- RETRIEVED LAUNCH PARAMS ---', params);
+      return params;
     } catch (e) {
+      console.warn('Could not retrieve launch params:', e);
       return null;
     }
   }, []);
@@ -34,7 +37,8 @@ export function useTelegram() {
       const u = initDataValue?.user || lp?.initData?.user;
       
       if (!u) {
-        console.warn('No user object found in signals or launch params');
+        console.warn('No user object found. Signals User:', initDataValue?.user);
+        console.warn('LP InitData User:', lp?.initData?.user);
         return null;
       }
       

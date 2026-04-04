@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import React, { Suspense, lazy } from 'react';
 import { useTelegramAuth } from './hooks/useTelegramAuth';
 import { useAuthStore } from './stores/authStore';
+import { useTelegram } from './hooks/useTelegram';
 
 // Dashboard Pages (Lazy Loaded)
 const AdminDashboard = lazy(() => import('./features/admin/pages/AdminDashboard'));
