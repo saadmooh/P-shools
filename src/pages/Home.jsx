@@ -28,62 +28,61 @@ export default function Home() {
   const personalizedOffers = offers?.slice(0, 3) || []
 
   return (
-    <div className="min-h-screen bg-surface gradient-mesh pb-24">
+    <div className="min-h-screen bg-white pb-24">
       <div className="p-5 max-w-md mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="mb-6"
+          className="mb-8"
         >
           <div className="flex justify-between items-center mb-2">
             <div>
-              <p className="text-muted text-sm">Good morning</p>
-              <h1 className="text-2xl font-bold text-text">
-                {user?.first_name || 'there'}! 👋
+              <p className="text-gray-400 text-sm">Good morning</p>
+              <h1 className="text-2xl font-medium text-gray-900">
+                {user?.first_name || 'there'}
               </h1>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-accent-light flex items-center justify-center overflow-hidden shadow-soft">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
               {user?.photo_url ? (
                 <img src={user.photo_url} alt="" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-xl">👤</span>
+                <span className="text-gray-400">👤</span>
               )}
             </div>
           </div>
         </motion.div>
 
-        <section className="mb-6">
+        <section className="mb-8">
           <PointsCard />
         </section>
 
-        <section className="mb-6">
+        <section className="mb-8">
           <motion.button
-            whileHover={{ scale: 1.02, boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)' }}
             whileTap={{ scale: 0.98 }}
             onClick={handleScan}
             disabled={scanning}
-            className="w-full py-5 bg-accent text-white font-bold rounded-2xl flex items-center justify-center gap-3 shadow-card hover:shadow-card-hover transition-all"
+            className="w-full py-4 bg-gray-900 text-white font-medium rounded-2xl flex items-center justify-center gap-3 transition-all"
           >
-            <span className="text-xl">📷</span>
+            <span className="text-lg">📷</span>
             {scanning ? 'Opening...' : 'Scan Receipt'}
           </motion.button>
         </section>
 
-        <section className="mb-6">
+        <section className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-text">For You</h2>
+            <h2 className="text-lg font-medium text-gray-900">For You</h2>
             <button
               onClick={() => navigate('/offers')}
-              className="text-accent font-semibold text-sm"
+              className="text-gray-500 font-medium text-sm"
             >
               See All
             </button>
           </div>
 
-          <div className="flex gap-4 overflow-x-auto pb-2 -mx-5 px-5">
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5">
             {personalizedOffers.length > 0 ? personalizedOffers.map((offer) => (
-              <div key={offer.id} className="min-w-[280px]">
+              <div key={offer.id} className="min-w-[260px]">
                 <OfferCard
                   id={offer.id}
                   title={offer.title}
@@ -95,21 +94,19 @@ export default function Home() {
                 />
               </div>
             )) : (
-              <div className="text-center py-8 text-muted w-full">
+              <div className="text-center py-8 text-gray-400 w-full">
                 <p>Loading offers...</p>
               </div>
             )}
           </div>
         </section>
 
-        <CrossPromoCard />
-
         <section>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-text">New Arrivals</h2>
+            <h2 className="text-lg font-medium text-gray-900">New Arrivals</h2>
             <button
               onClick={() => navigate('/products')}
-              className="text-accent font-semibold text-sm"
+              className="text-gray-500 font-medium text-sm"
             >
               See All
             </button>
@@ -126,7 +123,7 @@ export default function Home() {
                 onClick={() => navigate(`/products/${product.id}`)}
               />
             )) : (
-              <div className="col-span-2 text-center py-8 text-muted">
+              <div className="col-span-2 text-center py-8 text-gray-400">
                 <p>Loading products...</p>
               </div>
             )}

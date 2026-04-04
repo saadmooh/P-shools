@@ -33,7 +33,7 @@ export default function History() {
   }, {}) || {}
 
   return (
-    <div className="min-h-screen bg-surface pb-24">
+    <div className="min-h-screen bg-white pb-24">
       <div className="p-5 max-w-md mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -20 }}

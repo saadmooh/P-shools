@@ -17,31 +17,31 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-surface pb-24">
+    <div className="min-h-screen bg-white pb-24">
       <div className="p-5 max-w-md mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <h1 className="text-2xl font-bold text-text">Profile</h1>
+          <h1 className="text-xl font-medium text-gray-900">Profile</h1>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl p-6 mb-6 shadow-card"
+          className="bg-gray-50 rounded-2xl p-5 mb-6"
         >
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-accent-light flex items-center justify-center overflow-hidden">
+            <div className="w-14 h-14 rounded-xl bg-gray-200 flex items-center justify-center overflow-hidden">
               {user?.photo_url ? (
                 <img src={user.photo_url} alt="" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-3xl">👤</span>
+                <span className="text-xl text-gray-500">👤</span>
               )}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-text">
+              <h2 className="text-lg font-medium text-gray-900">
                 {user?.full_name || user?.first_name || 'User'}
               </h2>
               <TierBadge tier={membership?.tier || 'bronze'} size="medium" />

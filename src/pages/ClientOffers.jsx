@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Tag, ShoppingBag, Sparkles } from 'lucide-react'
+import { Tag } from 'lucide-react'
 import useUserStore from '../store/userStore'
 import { supabase } from '../lib/supabase'
 import ProductOfferCard from '../components/ProductOfferCard'
@@ -73,18 +73,14 @@ export default function ClientOffers() {
   })
 
   return (
-    <div className="min-h-screen bg-surface gradient-mesh pb-24">
+    <div className="min-h-screen bg-white pb-24">
       <div className="p-5 max-w-md mx-auto">
-        {/* Header Section */}
         <div className="flex items-center justify-between mb-8">
           <div className="text-right">
-            <h1 className="text-3xl font-black text-text tracking-tighter flex items-center gap-2 justify-end">
-              <Sparkles className="text-accent" size={24} />
-              صفقات اليوم
-            </h1>
-            <p className="text-sm text-muted font-bold mt-1">أفضل الأسعار المختارة لك بعناية</p>
+            <h1 className="text-2xl font-medium text-gray-900">صفقات اليوم</h1>
+            <p className="text-sm text-gray-400 mt-1">أفضل الأسعار المختارة لك</p>
           </div>
-          <button onClick={() => navigate(-1)} className="w-12 h-12 rounded-2xl bg-white border border-border flex items-center justify-center shadow-soft active:scale-95 transition-transform">
+          <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             ←
           </button>
         </div>
@@ -92,18 +88,18 @@ export default function ClientOffers() {
         {isLoading ? (
           <div className="grid gap-4">
             {[1,2,3,4].map(i => (
-              <div key={i} className="h-32 bg-white rounded-3xl border border-border animate-pulse" />
+              <div key={i} className="h-24 bg-gray-100 rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : offersWithProducts?.length > 0 ? (
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             <AnimatePresence>
               {offersWithProducts.map((product, i) => (
                 <motion.div
                   key={product.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03 }}
                 >
                   <ProductOfferCard
                     product={product}
@@ -116,27 +112,19 @@ export default function ClientOffers() {
           </div>
         ) : (
           <div className="text-center py-24">
-            <div className="w-20 h-20 bg-white rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-soft border border-border">
-              <Tag size={40} className="text-muted opacity-20" />
+            <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Tag size={24} className="text-gray-300" />
             </div>
-            <h3 className="text-xl font-black text-text mb-2">لا توجد عروض حالياً</h3>
-            <p className="text-sm text-muted font-bold px-10">ابقَ على اطلاع، فنحن نضيف صفقات جديدة باستمرار!</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">لا توجد عروض حالياً</h3>
+            <p className="text-sm text-gray-400 px-10">ابقَ على اطلاع، فنحن نضيف صفقات جديدة باستمرار!</p>
             <button 
               onClick={() => navigate('/')}
-              className="mt-8 px-8 py-3 bg-accent text-white font-black rounded-2xl shadow-lg shadow-accent/20 active:scale-95 transition-all"
+              className="mt-8 px-6 py-3 bg-gray-900 text-white font-medium rounded-xl"
             >
               العودة للرئيسية
             </button>
           </div>
         )}
-      </div>
-
-      {/* Floating Category Indicator - Just for aesthetic */}
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-        <div className="bg-white/80 backdrop-blur-md border border-border px-4 py-2 rounded-full shadow-xl flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-[10px] font-black text-text uppercase tracking-widest">مباشر: {offersWithProducts?.length || 0} صفقات</span>
-        </div>
       </div>
     </div>
   )

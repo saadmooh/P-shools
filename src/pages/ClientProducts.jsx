@@ -51,14 +51,13 @@ export default function ClientProducts() {
       const discountAmount = product.price * (offerDetails.discount_percent / 100);
       const discountedPrice = product.price - discountAmount;
       return (
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-muted line-through text-sm">{product.price?.toLocaleString()} دج</span>
-          <span className="text-accent font-black text-base">{discountedPrice?.toLocaleString()} دج</span>
-          <span className="text-xs text-green-600 font-bold">-{offerDetails.discount_percent}%</span>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-400 line-through text-xs">{product.price?.toLocaleString()} د.إ</span>
+          <span className="text-gray-900 font-medium text-sm">{discountedPrice?.toLocaleString()} د.إ</span>
         </div>
       );
     } else if (product.price) {
-      return <span className="text-accent font-black text-sm">{product.price?.toLocaleString()} <span className="text-[10px]">دج</span></span>;
+      return <span className="text-gray-900 font-medium text-sm">{product.price?.toLocaleString()} د.إ</span>;
     }
     return null;
   };
@@ -69,23 +68,23 @@ export default function ClientProducts() {
   ) || [];
 
   return (
-    <div className="min-h-screen bg-surface gradient-mesh pb-24">
+    <div className="min-h-screen bg-white pb-24">
       <div className="p-5 max-w-md mx-auto">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white border border-border flex items-center justify-center">
+          <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             ←
           </button>
-          <h1 className="text-2xl font-black text-text">المنتجات</h1>
+          <h1 className="text-xl font-medium text-gray-900">المنتجات</h1>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-6 justify-end">
           {categories.map(cat => (
             <button
               key={cat}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 catFilter === cat
-                  ? 'bg-accent text-white'
-                  : 'bg-white text-muted border border-border'
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-gray-50 text-gray-500'
               }`}
               onClick={() => setCatFilter(cat)}
             >
@@ -97,7 +96,7 @@ export default function ClientProducts() {
         {isLoading ? (
           <div className="grid grid-cols-2 gap-4">
             {[1,2,3,4].map(i => (
-              <div key={i} className="aspect-square bg-white rounded-3xl animate-pulse" />
+              <div key={i} className="aspect-square bg-gray-100 rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : filteredProducts.length > 0 ? (
@@ -109,7 +108,6 @@ export default function ClientProducts() {
                                                  offerDetails.discount_percent && 
                                                  offerDetails.discount_percent > 0;
                 
-                // Determine if the product is exclusive and requires a specific tier
                 const isExclusiveAndTierRestricted = product.is_exclusive && 
                                                      product.min_tier_to_view && 
                                                      product.min_tier_to_view.toLowerCase() !== 'basic';
@@ -117,51 +115,39 @@ export default function ClientProducts() {
                 return (
                   <motion.div
                     key={product.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.05 }}
-                    whileHover={{ 
-                      y: -6, // Slight upward movement
-                      scale: 1.02, // Slight scale up
-                      shadow: '0 12px 24px -4px rgb(0 0 0 / 0.15)', // Enhance shadow
-                      borderColor: '#D4AF37' // Add accent border on hover
-                    }}
+                    transition={{ delay: i * 0.03 }}
                     onClick={() => navigate(`/products/${product.id}`)}
-                    className="bg-white rounded-3xl overflow-hidden border border-border shadow-soft cursor-pointer active:scale-[0.98] transition-transform hover:shadow-xl hover:border-accent" // Added hover effects and accent border
+                    className="bg-white rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
                   >
-                    <div className="aspect-square bg-surface relative">
+                    <div className="aspect-square bg-gray-50 relative">
                       {product.image_url ? (
                         <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted/20">
-                          <Package size={48} />
+                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                          <Package size={32} />
                         </div>
                       )}
-                      {/* Exclusive Badge (Lock icon) */}
                       {product.is_exclusive && (
-                        <div className="absolute top-1 right-1 p-1 bg-yellow-400/80 backdrop-blur-sm rounded-md z-10">
-                          <Lock size={14} className="text-white" />
+                        <div className="absolute top-2 right-2 p-1 bg-gray-900/80 rounded-md z-10">
+                          <Lock size={12} className="text-white" />
                         </div>
                       )}
-                      {/* Discount Badge - Positioned top-right as per plan */}
                       {isActiveOfferWithDiscount && (
-                        <div className="absolute top-1 right-1 p-1 bg-red-600/80 backdrop-blur-sm rounded-md z-10 flex items-center">
-                          <Tag size={14} className="text-white" />
-                          <span className="text-[10px] font-bold text-white ml-0.5">-{offerDetails.discount_percent}%</span>
+                        <div className="absolute top-2 right-2 px-2 py-1 bg-gray-900 rounded-md z-10 flex items-center">
+                          <span className="text-[10px] font-medium text-white">-{offerDetails.discount_percent}%</span>
                         </div>
                       )}
                     </div>
                     <div className="p-3">
-                      {/* Tier Indicator (Crown icon) */}
                       {isExclusiveAndTierRestricted && (
                           <div className="flex items-center gap-1 mb-1">
-                            <Crown size={12} className="text-yellow-500" />
-                            <span className="text-[10px] font-black text-yellow-600 uppercase">{product.min_tier_to_view}</span>
+                            <Crown size={12} className="text-gray-400" />
+                            <span className="text-[10px] font-medium text-gray-500 uppercase">{product.min_tier_to_view}</span>
                           </div>
                       )}
-                      <h4 className="text-sm font-black text-text truncate mb-1">{product.name}</h4>
-                      
-                      {/* Price Display with Discount Logic */}
+                      <h4 className="text-sm font-medium text-gray-900 truncate mb-1">{product.name}</h4>
                       {displayProductPriceInfo(product)}
                     </div>
                   </motion.div>
@@ -171,10 +157,10 @@ export default function ClientProducts() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
-              <Package size={32} className="text-muted opacity-20" />
+            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Package size={24} className="text-gray-300" />
             </div>
-            <p className="text-muted font-bold">لا توجد منتجات</p>
+            <p className="text-gray-400 font-medium">لا توجد منتجات</p>
           </div>
         )}
       </div>

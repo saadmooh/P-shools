@@ -75,18 +75,18 @@ export default function OfferDetail() {
 
   if (offerLoading) {
     return (
-      <div className="min-h-screen bg-surface flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
       </div>
     )
   }
 
   if (offerError || !offer) {
     return (
-      <div className="min-h-screen bg-surface flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted mb-4">Offer not found</p>
-          <button onClick={() => navigate(-1)} className="text-accent">Go back</button>
+          <p className="text-gray-400 mb-4">Offer not found</p>
+          <button onClick={() => navigate(-1)} className="text-gray-600 font-medium">Go back</button>
         </div>
       </div>
     )
@@ -94,32 +94,31 @@ export default function OfferDetail() {
 
   if (redeemed && coupon) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-accent-light to-white p-5">
+      <div className="min-h-screen bg-white p-5">
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="max-w-md mx-auto text-center py-12"
+          className="max-w-md mx-auto text-center py-10"
         >
-          <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <span className="text-5xl">✅</span>
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">✅</span>
           </div>
-          <h2 className="text-2xl font-bold text-text mb-2">Offer Activated!</h2>
-          <p className="text-muted mb-6">{offer.title}</p>
+          <h2 className="text-xl font-medium text-gray-900 mb-2">Offer Activated!</h2>
+          <p className="text-gray-500 mb-5">{offer.title}</p>
           
-          <div className="bg-white rounded-3xl p-6 mb-6 shadow-card">
+          <div className="bg-gray-50 rounded-2xl p-5 mb-5">
             <div className="flex justify-center mb-4">
-              <QRCodeCanvas value={coupon} size={180} level="H" includeMargin={false} />
+              <QRCodeCanvas value={coupon} size={160} level="H" includeMargin={false} />
             </div>
-            <p className="text-3xl font-mono font-bold text-accent tracking-wider mb-2">{coupon}</p>
-            <p className="text-muted text-sm">Show this to the cashier</p>
-            <p className="text-muted text-xs mt-2">Expires in {formatTime(timeLeft)}</p>
+            <p className="text-2xl font-mono font-medium text-gray-900 tracking-wider mb-2">{coupon}</p>
+            <p className="text-gray-400 text-sm">Show this to the cashier</p>
+            <p className="text-gray-400 text-xs mt-2">Expires in {formatTime(timeLeft)}</p>
           </div>
 
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/offers')}
-            className="px-10 py-4 bg-accent text-white font-bold rounded-2xl shadow-lg"
+            className="px-8 py-3 bg-gray-900 text-white font-medium rounded-xl"
           >
             Done
           </motion.button>
@@ -129,70 +128,67 @@ export default function OfferDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-surface p-5">
+    <div className="min-h-screen bg-white p-5">
       <div className="max-w-md mx-auto">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 -ml-2 mb-4"
+          className="p-2 -ml-2 mb-4 text-gray-600"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2">
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
+          ←
         </button>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl overflow-hidden shadow-card"
+          className="bg-gray-50 rounded-2xl overflow-hidden"
         >
-          <div className="h-40 bg-gradient-to-br from-accent-light to-surface" />
+          <div className="h-32 bg-gray-100" />
           
-          <div className="p-6">
-            <span className="px-3 py-1 bg-accent-light text-accent-dark rounded-full text-xs font-semibold">
+          <div className="p-5">
+            <span className="px-3 py-1 bg-gray-900 text-white rounded-full text-xs font-medium">
               {offer.type}
             </span>
             
-            <h1 className="text-2xl font-bold text-text mt-3 mb-2">
+            <h1 className="text-xl font-medium text-gray-900 mt-3 mb-2">
               {offer.title}
             </h1>
             
-            <p className="text-muted mb-6">
+            <p className="text-gray-500 text-sm mb-6">
               {offer.description}
             </p>
 
             {offer.discount_percent && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
-                <p className="text-red-600 font-bold text-center">
-                  🎉 {offer.discount_percent}% Discount
+              <div className="bg-gray-100 rounded-xl p-3 mb-4">
+                <p className="text-gray-900 font-medium text-center">
+                  {offer.discount_percent}% خصم
                 </p>
               </div>
             )}
 
             <div className="flex items-center justify-between text-sm mb-6">
               <div>
-                <p className="text-muted">Points Required</p>
-                <p className="text-text font-bold text-lg">{offer.points_cost ? `${offer.points_cost} pts` : 'Free'}</p>
+                <p className="text-gray-400 text-xs">Points Required</p>
+                <p className="text-gray-900 font-medium">{offer.points_cost ? `${offer.points_cost} pts` : 'Free'}</p>
               </div>
               <div className="text-right">
-                <p className="text-muted">Expires</p>
-                <p className="text-text font-semibold">
+                <p className="text-gray-400 text-xs">Expires</p>
+                <p className="text-gray-600 font-medium">
                   {offer.valid_until ? new Date(offer.valid_until).toLocaleDateString() : 'N/A'}
                 </p>
               </div>
             </div>
 
             {products && products.length > 0 && (
-              <div className="mb-6 border-t border-border pt-4">
-                <h3 className="text-sm font-bold text-text mb-3">المنتجات المشمولة</h3>
+              <div className="mb-6 border-t border-gray-200 pt-4">
+                <h3 className="text-sm font-medium text-gray-900 mb-3">المنتجات المشمولة</h3>
                 <OfferProductList products={products} />
               </div>
             )}
             
             <motion.button
-              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleRedeem}
-              className="w-full py-4 rounded-2xl font-bold transition-all bg-accent text-white shadow-lg hover:shadow-xl"
+              className="w-full py-3 rounded-xl font-medium transition-all bg-gray-900 text-white"
             >
               {offer.points_cost ? 'Redeem Now' : 'Activate Offer'}
             </motion.button>
@@ -203,15 +199,15 @@ export default function OfferDetail() {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-5 z-50"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center p-5 z-50"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-3xl p-6 max-w-sm w-full"
+              className="bg-white rounded-2xl p-5 max-w-sm w-full"
             >
-              <h3 className="text-xl font-bold text-text mb-2">Confirm</h3>
-              <p className="text-muted mb-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Confirm</h3>
+              <p className="text-gray-500 text-sm mb-5">
                 {offer.points_cost 
                   ? `Use ${offer.points_cost} points from your balance?`
                   : 'Activate this offer?'}
@@ -219,13 +215,13 @@ export default function OfferDetail() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowConfirm(false)}
-                  className="flex-1 py-3 bg-surface text-text rounded-2xl font-semibold"
+                  className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmRedeem}
-                  className="flex-1 py-3 bg-accent text-white font-bold rounded-2xl"
+                  className="flex-1 py-3 bg-gray-900 text-white font-medium rounded-xl"
                 >
                   Confirm
                 </button>
