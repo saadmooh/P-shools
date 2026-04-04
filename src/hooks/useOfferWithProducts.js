@@ -43,7 +43,33 @@ export const useOfferWithProducts = (offerId) => {
             .or(`id.in.(SELECT product_id FROM offer_products WHERE offer_id='${offerId}')`);
           
           if (productError) throw productError;
-          setProducts(productData || []);
+
+          // Calculate discounted prices based on offer type and discount_percent
+          const productsWithCalculatedPrices = (productData || []).map(product => {
+            const updatedProduct = { ...product };
+            
+            if (offerData.type === 'gift') {
+              updatedProduct.original_price = product.price;
+              updatedProduct.discount_percentage = 100;
+              updatedProduct.price = 0;
+            } else if (offerData.discount_percent && offerData.discount_percent > 0) {
+              const discountAmount = Math.round(product.price * (offerData.discount_percent / 100));
+              updatedProduct.original_price = product.price;
+              updatedProduct.discount_percentage = offerData.discount_percent;
+              updatedProduct.price = product.price - discountAmount;
+            } else if (product.discount_percentage && product.discount_percentage > 0) {
+              // Use product's own discount if no offer discount
+              const discountAmount = Math.round(product.price * (product.discount_percentage / 100));
+              if (!updatedProduct.original_price) {
+                updatedProduct.original_price = product.price;
+              }
+              updatedProduct.price = product.price - discountAmount;
+            }
+            
+            return updatedProduct;
+          });
+          
+          setProducts(productsWithCalculatedPrices);
         }
       } catch (err) {
         console.error('Error fetching offer with products:', err);

@@ -18,6 +18,7 @@ export default function ClientOffers() {
         .select(`
           id,
           type,
+          discount_percent,
           offer_products (
             products (*)
           )
@@ -27,13 +28,34 @@ export default function ClientOffers() {
       
       if (error) throw error;
       
-      // Flatten and add offer type to each product
+      // Flatten and add offer type + calculate prices to each product
       const productsWithTypes = data.flatMap(o => 
-        o.offer_products.map(op => ({
-          ...op.products,
-          offer_id: o.id,
-          offer_type: o.type
-        }))
+        o.offer_products.map(op => {
+          const product = { ...op.products };
+          
+          if (o.type === 'gift') {
+            product.original_price = product.price;
+            product.discount_percentage = 100;
+            product.price = 0;
+          } else if (o.discount_percent && o.discount_percent > 0) {
+            const discountAmount = Math.round(product.price * (o.discount_percent / 100));
+            product.original_price = product.price;
+            product.discount_percentage = o.discount_percent;
+            product.price = product.price - discountAmount;
+          } else if (product.discount_percentage && product.discount_percentage > 0) {
+            const discountAmount = Math.round(product.price * (product.discount_percentage / 100));
+            if (!product.original_price) {
+              product.original_price = product.price;
+            }
+            product.price = product.price - discountAmount;
+          }
+          
+          return {
+            ...product,
+            offer_id: o.id,
+            offer_type: o.type
+          };
+        })
       );
 
       // Deduplicate by ID
