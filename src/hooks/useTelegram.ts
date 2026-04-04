@@ -18,16 +18,26 @@ export function useTelegram() {
   const themeParamsValue = useSignal(themeParams.state);
   const viewportValue = useSignal(viewport.state);
 
+  // Fallback to launch params if signals are empty
+  const lp = useMemo(() => {
+    try {
+      return retrieveLaunchParams();
+    } catch (e) {
+      return null;
+    }
+  }, []);
+
   // 1. Basic User Info
   const user = useMemo(() => {
     try {
-      console.log('--- EXTRACTING USER FROM INIT DATA ---');
-      console.log('initDataValue:', initDataValue);
-      const u = initDataValue?.user;
+      console.log('--- EXTRACTING USER ---');
+      const u = initDataValue?.user || lp?.initData?.user;
+      
       if (!u) {
-        console.warn('No user object found in initDataValue');
+        console.warn('No user object found in signals or launch params');
         return null;
       }
+      
       console.log('Successfully extracted user:', u);
       return {
         id: u.id,
@@ -43,22 +53,23 @@ export function useTelegram() {
       console.error('Error during user extraction:', e);
       return null;
     }
-  }, [initDataValue]);
+  }, [initDataValue, lp]);
 
   // 2. Session & Security Data
   const sessionData = useMemo(() => {
     try {
+      const id = initDataValue || lp?.initData;
       return {
-        initDataRaw: initData.raw,
-        hash: initDataValue?.hash,
-        authDate: initDataValue?.authDate,
-        queryId: initDataValue?.queryId,
-        startParam: initDataValue?.startParam,
+        initDataRaw: lp?.initDataRaw || '',
+        hash: id?.hash || '',
+        authDate: id?.authDate || new Date(),
+        queryId: id?.queryId || '',
+        startParam: id?.startParam || '',
       };
     } catch (e) {
       return { initDataRaw: '', hash: '', authDate: new Date(), queryId: '', startParam: '' };
     }
-  }, [initDataValue]);
+  }, [initDataValue, lp]);
 
   // 3. Device & Environment Data
   const deviceData = useMemo(() => {
