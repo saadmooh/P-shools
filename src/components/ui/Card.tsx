@@ -11,8 +11,8 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          'rounded-2xl bg-[var(--tg-theme-section-bg-color)] text-[var(--tg-theme-text-color)] border border-slate-100 transition-all duration-300',
-          'shadow-[var(--card-shadow)] hover:shadow-[var(--card-shadow-hover)]',
+          'rounded-2xl border border-zinc-100 bg-white',
+          elevated ? 'shadow-sm' : 'shadow-none',
           className
         )}
         {...props}
@@ -28,11 +28,11 @@ export const CardHeader = ({ className, ...props }: HTMLAttributes<HTMLDivElemen
 );
 
 export const CardTitle = ({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) => (
-  <h3 className={cn('text-base font-bold tracking-tight text-slate-900', className)} {...props} />
+  <h3 className={cn('text-base font-semibold text-zinc-900', className)} {...props} />
 );
 
 export const CardDescription = ({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) => (
-  <p className={cn('text-xs text-slate-500 font-medium', className)} {...props} />
+  <p className={cn('text-sm text-zinc-500', className)} {...props} />
 );
 
 export const CardContent = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (

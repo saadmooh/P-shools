@@ -1,55 +1,38 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  /* Clean White Palette */
   --tg-theme-bg-color: #ffffff;
-  --tg-theme-secondary-bg-color: #f8fafc;
+  --tg-theme-secondary-bg-color: #fafafa;
   --tg-theme-section-bg-color: #ffffff;
-  --tg-theme-text-color: #0f172a;
-  --tg-theme-hint-color: #64748b;
-  --tg-theme-link-color: #3b82f6;
-  --tg-theme-button-color: #1e293b; /* Premium Dark/Midnight Button */
+  --tg-theme-text-color: #18181b;
+  --tg-theme-hint-color: #a1a1aa;
+  --tg-theme-link-color: #2563eb;
+  --tg-theme-button-color: #18181b;
   --tg-theme-button-text-color: #ffffff;
   --tg-theme-accent-text-color: #2563eb;
   --tg-theme-destructive-text-color: #ef4444;
   
-  /* Premium Accents */
-  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  --card-shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.07), 0 10px 10px -6px rgba(0, 0, 0, 0.05);
-  --glass-effect: rgba(255, 255, 255, 0.8);
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  --card-shadow-hover: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--tg-theme-secondary-bg-color);
   color: var(--tg-theme-text-color);
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3%3Cfilter id='noiseFilter'%3%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3%3C/filter%3%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3%3C/svg%3");
-  background-attachment: fixed;
-  opacity: 0.99; /* Subtle noise overlay */
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Typography Overrides */
-h1, h2, h3, h4 {
-  font-weight: 700;
-  letter-spacing: -0.025em;
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  margin: 0;
 }
 
-.hero-text {
-  font-size: 2.5rem;
-  line-height: 1.1;
-  background: linear-gradient(to bottom right, #0f172a, #334155);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* Global Transitions */
-* {
-  box-sizing: border-box;
-  transition: all 0.2s ease-in-out;
-}
-
-/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 4px;
 }
@@ -57,6 +40,10 @@ h1, h2, h3, h4 {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 10px;
+  background: #d4d4d8;
+  border-radius: 4px;
+}
+
+input, textarea, select {
+  font-family: inherit;
 }

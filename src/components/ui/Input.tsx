@@ -11,21 +11,21 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="flex flex-col gap-1.5 w-full">
         {label && (
-          <label className="text-[var(--tg-theme-section-header-text-color)] text-sm font-medium">
+          <label className="text-sm font-medium text-zinc-700">
             {label}
           </label>
         )}
         <input
           ref={ref}
           className={cn(
-            'flex h-10 w-full rounded-md bg-[var(--tg-theme-secondary-bg-color)] px-3 py-2 text-sm ring-offset-[var(--tg-theme-bg-color)] file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-[var(--tg-theme-hint-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tg-theme-button-color)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 border-none transition-all',
-            error && 'ring-2 ring-[var(--tg-theme-destructive-text-color)]',
+            'flex h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all',
+            error && 'border-red-500 focus:ring-red-500',
             className
           )}
           {...props}
         />
         {error && (
-          <p className="text-[var(--tg-theme-destructive-text-color)] text-xs font-medium mt-1">
+          <p className="text-red-500 text-xs font-medium mt-1">
             {error}
           </p>
         )}
