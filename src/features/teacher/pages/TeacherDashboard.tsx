@@ -9,7 +9,7 @@ import Button from '../../../components/ui/Button';
 const TeacherDashboard: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-...
+
   const sessions = [
     { time: '14:00', group: 'Grade 5 Maths', room: 'Room A1', type: 'group' },
     { time: '16:00', group: 'Advanced Physics', room: 'Lab 2', type: 'course' },

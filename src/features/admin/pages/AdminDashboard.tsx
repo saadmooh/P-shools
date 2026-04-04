@@ -8,7 +8,7 @@ import { Users, BookOpen, Calendar, CreditCard, Shield } from 'lucide-react';
 const AdminDashboard: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-...
+
   const stats = [
     { label: 'Users', value: '124', icon: Users, color: 'text-blue-500' },
     { label: 'Groups', value: '18', icon: BookOpen, color: 'text-green-500' },
