@@ -6,7 +6,8 @@ import {
   backButton, 
   themeParams, 
   viewport,
-  cloudStorage
+  cloudStorage,
+  retrieveLaunchParams
 } from '@telegram-apps/sdk-react';
 
 /**
@@ -25,7 +26,31 @@ export function useTelegram() {
       console.log('--- RETRIEVED LAUNCH PARAMS ---', params);
       return params;
     } catch (e) {
-      console.warn('Could not retrieve launch params:', e);
+      console.warn('Could not retrieve launch params via SDK:', e);
+      return null;
+    }
+  }, []);
+
+  // Legacy WebApp fallback (very reliable in desktop/mobile clients)
+  const legacyWebAppUser = useMemo(() => {
+    try {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.initDataUnsafe?.user) {
+        console.log('--- FOUND USER VIA LEGACY WEBAPP API ---', tg.initDataUnsafe.user);
+        const u = tg.initDataUnsafe.user;
+        return {
+          id: u.id,
+          firstName: u.first_name, // Note: legacy uses snake_case
+          lastName: u.last_name,
+          username: u.username,
+          languageCode: u.language_code,
+          isPremium: u.is_premium,
+          photoUrl: u.photo_url,
+          allowsWriteToPm: u.allows_write_to_pm,
+        };
+      }
+      return null;
+    } catch (e) {
       return null;
     }
   }, []);
@@ -34,41 +59,42 @@ export function useTelegram() {
   const user = useMemo(() => {
     try {
       console.log('--- EXTRACTING USER ---');
-      const u = initDataValue?.user || lp?.initData?.user;
+      
+      // Try Signal -> Try LaunchParams -> Try Legacy WebApp
+      const u = initDataValue?.user || lp?.initData?.user || legacyWebAppUser;
       
       if (!u) {
-        console.warn('No user object found. Signals User:', initDataValue?.user);
-        console.warn('LP InitData User:', lp?.initData?.user);
+        console.warn('No user object found across all detection methods');
         return null;
       }
       
       console.log('Successfully extracted user:', u);
       return {
         id: u.id,
-        firstName: u.firstName,
-        lastName: u.lastName,
+        firstName: u.firstName || (u as any).first_name,
+        lastName: u.lastName || (u as any).last_name,
         username: u.username,
-        languageCode: u.languageCode,
-        isPremium: u.isPremium,
-        photoUrl: u.photoUrl,
-        allowsWriteToPm: u.allowsWriteToPm,
+        languageCode: u.languageCode || (u as any).language_code,
+        isPremium: u.isPremium || (u as any).is_premium,
+        photoUrl: u.photoUrl || (u as any).photo_url,
+        allowsWriteToPm: u.allowsWriteToPm || (u as any).allows_write_to_pm,
       };
     } catch (e) {
       console.error('Error during user extraction:', e);
       return null;
     }
-  }, [initDataValue, lp]);
+  }, [initDataValue, lp, legacyWebAppUser]);
 
   // 2. Session & Security Data
   const sessionData = useMemo(() => {
     try {
       const id = initDataValue || lp?.initData;
       return {
-        initDataRaw: lp?.initDataRaw || '',
-        hash: id?.hash || '',
+        initDataRaw: lp?.initDataRaw || (window as any).Telegram?.WebApp?.initData || '',
+        hash: id?.hash || (window as any).Telegram?.WebApp?.initDataUnsafe?.hash || '',
         authDate: id?.authDate || new Date(),
-        queryId: id?.queryId || '',
-        startParam: id?.startParam || '',
+        queryId: id?.queryId || (window as any).Telegram?.WebApp?.initDataUnsafe?.query_id || '',
+        startParam: id?.startParam || (window as any).Telegram?.WebApp?.initDataUnsafe?.start_param || '',
       };
     } catch (e) {
       return { initDataRaw: '', hash: '', authDate: new Date(), queryId: '', startParam: '' };
@@ -77,16 +103,16 @@ export function useTelegram() {
 
   // 3. Device & Environment Data
   const deviceData = useMemo(() => {
-    const tg = typeof window !== 'undefined' ? window.Telegram?.WebApp : null;
+    const tg = typeof window !== 'undefined' ? (window as any).Telegram?.WebApp : null;
     return {
-      platform: tg?.platform || 'unknown',
-      version: tg?.version || '0.0',
+      platform: tg?.platform || lp?.platform || 'unknown',
+      version: tg?.version || lp?.version || '0.0',
       colorScheme: tg?.colorScheme || 'light',
       isExpanded: tg?.isExpanded || false,
       viewportHeight: viewportValue?.height || 0,
       viewportStableHeight: viewportValue?.stableHeight || 0,
     };
-  }, [viewportValue]);
+  }, [viewportValue, lp]);
 
   // 4. Theme Data
   const themeData = useMemo(() => {
@@ -112,21 +138,21 @@ export function useTelegram() {
 
   // 5. Actions & Utilities
   const showAlert = (message: string) => {
-    window.Telegram?.WebApp?.showAlert(message);
+    (window as any).Telegram?.WebApp?.showAlert(message);
   };
 
   const showConfirm = (message: string, callback: (ok: boolean) => void) => {
-    window.Telegram?.WebApp?.showConfirm(message, callback);
+    (window as any).Telegram?.WebApp?.showConfirm(message, callback);
   };
 
   const hapticFeedback = (type: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft' = 'medium') => {
-    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type);
+    (window as any).Telegram?.WebApp?.HapticFeedback?.impactOccurred(type);
   };
 
   const requestPhone = (): Promise<{ phone: string } | null> => {
     return new Promise((resolve) => {
-      if (window.Telegram?.WebApp?.requestContact) {
-        window.Telegram.WebApp.requestContact((ok: boolean, response: any) => {
+      if ((window as any).Telegram?.WebApp?.requestContact) {
+        (window as any).Telegram.WebApp.requestContact((ok: boolean, response: any) => {
           if (ok && response?.contact) {
             resolve({ phone: response.contact.phone_number });
           } else {
@@ -139,7 +165,7 @@ export function useTelegram() {
     });
   };
 
-  const closeApp = () => window.Telegram?.WebApp?.close();
+  const closeApp = () => (window as any).Telegram?.WebApp?.close();
 
   return {
     user,
