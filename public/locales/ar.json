@@ -1,0 +1,24 @@
+{
+  "common": {
+    "loading": "جاري التحميل...",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "error": "خطأ",
+    "success": "نجاح",
+    "welcome": "مرحباً",
+    "back": "رجوع",
+    "next": "التالي"
+  },
+  "roles": {
+    "admin": "مسؤول",
+    "teacher": "أستاذ",
+    "guardian": "ولي أمر",
+    "independent": "مشترك مستقل"
+  },
+  "dashboards": {
+    "admin_title": "لوحة الإدارة",
+    "teacher_title": "لوحة الأستاذ",
+    "guardian_title": "لوحة ولي الأمر",
+    "independent_title": "لوحة المشترك"
+  }
+}

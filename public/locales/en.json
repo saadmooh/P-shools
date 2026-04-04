@@ -1,0 +1,24 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "error": "Error",
+    "success": "Success",
+    "welcome": "Welcome",
+    "back": "Back",
+    "next": "Next"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "teacher": "Teacher",
+    "guardian": "Guardian",
+    "independent": "Independent Student"
+  },
+  "dashboards": {
+    "admin_title": "Admin Dashboard",
+    "teacher_title": "Teacher Dashboard",
+    "guardian_title": "Guardian Dashboard",
+    "independent_title": "Independent Dashboard"
+  }
+}
