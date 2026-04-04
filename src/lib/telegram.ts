@@ -36,19 +36,15 @@ export const initTelegram = () => {
     // This avoids the loud LaunchParamsRetrieveError in the console.
     try {
       if (typeof retrieveLaunchParams === 'function') {
-        retrieveLaunchParams();
-      } else {
-        return; // SDK not loaded correctly
+        const lp = retrieveLaunchParams();
+        console.log('Launch params retrieved:', lp);
       }
     } catch (e) {
-      console.warn('Telegram launch parameters not found. Running in web mode.');
-      return;
+      console.warn('Telegram launch parameters not found. Proceeding with init() anyway.');
     }
 
     if (typeof init === 'function') {
       init();
-    } else {
-      return;
     }
     
     // Initialize required components if supported

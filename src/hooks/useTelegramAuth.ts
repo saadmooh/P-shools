@@ -15,6 +15,7 @@ export function useTelegramAuth() {
 
   useEffect(() => {
     async function authenticate() {
+      console.log('Telegram User Detected:', tgUser);
       if (!tgUser) {
         setIsLoading(false);
         return;

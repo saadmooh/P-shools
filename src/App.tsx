@@ -21,11 +21,20 @@ const AttendanceMarking = lazy(() => import('./features/teacher/pages/Attendance
 const MyPayroll = lazy(() => import('./features/teacher/pages/MyPayroll'));
 const SubmitJustification = lazy(() => import('./features/guardian/pages/SubmitJustification'));
 
-const Login = () => <div className="p-4 flex flex-col items-center justify-center h-screen bg-[var(--tg-theme-bg-color)]">Please open this app from Telegram.</div>;
+const Login = ({ error }: { error: string | null }) => (
+  <div className="p-4 flex flex-col items-center justify-center h-screen bg-[var(--tg-theme-bg-color)]">
+    <p className="text-center mb-4">Please open this app from Telegram.</p>
+    {error && (
+      <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm max-w-xs text-center">
+        Error: {error}
+      </div>
+    )}
+  </div>
+);
 const NotFound = () => <div className="p-4">404 - Page Not Found</div>;
 
 function App() {
-  const { isLoading, isAuthenticated } = useTelegramAuth();
+  const { isLoading, error, isAuthenticated } = useTelegramAuth();
   const { user } = useAuthStore();
 
   if (isLoading) {
@@ -50,7 +59,7 @@ function App() {
       }>
         <Routes>
           <Route path="/" element={
-            !isAuthenticated ? <Login /> : <Navigate to={`/${user?.role}`} />
+            !isAuthenticated ? <Login error={error} /> : <Navigate to={`/${user?.role}`} />
           } />
           
           {/* Admin Routes */}
