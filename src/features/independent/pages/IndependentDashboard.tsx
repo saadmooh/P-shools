@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../../shared/Layout';
 import Card, { CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Book, Compass, Clock, CreditCard } from 'lucide-react';
@@ -7,6 +8,7 @@ import Button from '../../../components/ui/Button';
 
 const IndependentDashboard: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const courses = [
     { name: 'Full Stack Web Dev', progress: 65, nextSession: 'Tomorrow, 10:00' },

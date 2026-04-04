@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '../../shared/Layout';
 import Card, { CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
@@ -11,6 +12,7 @@ import { invoicesService } from '../../../services/supabase/billing';
 
 const GuardianDashboard: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user } = useAuthStore();
 
   const { data: guardianData } = useQuery({

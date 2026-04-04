@@ -1,12 +1,14 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../../shared/Layout';
 import Card, { CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
-import { Users, BookOpen, Calendar, CreditCard } from 'lucide-react';
+import { Users, BookOpen, Calendar, CreditCard, Shield } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
   const { t } = useTranslation();
-
+  const navigate = useNavigate();
+...
   const stats = [
     { label: 'Users', value: '124', icon: Users, color: 'text-blue-500' },
     { label: 'Groups', value: '18', icon: BookOpen, color: 'text-green-500' },

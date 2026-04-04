@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../../shared/Layout';
 import Card, { CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Calendar, UserCheck, Clock, Award } from 'lucide-react';
@@ -7,7 +8,8 @@ import Button from '../../../components/ui/Button';
 
 const TeacherDashboard: React.FC = () => {
   const { t } = useTranslation();
-
+  const navigate = useNavigate();
+...
   const sessions = [
     { time: '14:00', group: 'Grade 5 Maths', room: 'Room A1', type: 'group' },
     { time: '16:00', group: 'Advanced Physics', room: 'Lab 2', type: 'course' },
