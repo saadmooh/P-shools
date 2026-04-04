@@ -6,7 +6,6 @@ import {
   backButton, 
   themeParams, 
   viewport,
-  lp,
   cloudStorage
 } from '@telegram-apps/sdk-react';
 
@@ -115,7 +114,6 @@ export function useTelegram() {
     themeData,
     mainButton,
     backButton,
-    lp,
     cloudStorage,
     showAlert,
     showConfirm,
