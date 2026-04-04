@@ -22,9 +22,13 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-[var(--tg-theme-bg-color)] text-[var(--tg-theme-text-color)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--tg-theme-button-color)] mb-4"></div>
-        <p className="font-medium">Authenticating...</p>
+      <div className="flex flex-col items-center justify-center h-screen bg-white">
+        <div className="relative">
+          <div className="animate-ping absolute inline-flex h-12 w-12 rounded-full bg-slate-100 opacity-75"></div>
+          <div className="relative rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-800"></div>
+        </div>
+        <p className="mt-8 font-black text-slate-900 tracking-tighter text-2xl">EMS PORTAL</p>
+        <p className="mt-2 text-slate-400 font-medium text-xs uppercase tracking-widest animate-pulse">Initializing System...</p>
       </div>
     );
   }
