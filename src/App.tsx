@@ -18,11 +18,23 @@ const StudentsManagement = lazy(() => import('./features/admin/pages/StudentsMan
 const SubjectsManagement = lazy(() => import('./features/admin/pages/SubjectsManagement'));
 const UsersManagement = lazy(() => import('./features/admin/pages/UsersManagement'));
 const InvoicesManagement = lazy(() => import('./features/admin/pages/InvoicesManagement'));
+const AdminSchedule = lazy(() => import('./features/admin/pages/AdminSchedule'));
+const AdminDocuments = lazy(() => import('./features/admin/pages/AdminDocuments'));
+const AdminProfile = lazy(() => import('./features/admin/pages/AdminProfile'));
 
 // Teacher & Other Pages (Lazy Loaded)
 const AttendanceMarking = lazy(() => import('./features/teacher/pages/AttendanceMarking'));
 const MyPayroll = lazy(() => import('./features/teacher/pages/MyPayroll'));
+const TeacherSchedule = lazy(() => import('./features/teacher/pages/TeacherSchedule'));
+const TeacherDocuments = lazy(() => import('./features/teacher/pages/TeacherDocuments'));
+const TeacherProfile = lazy(() => import('./features/teacher/pages/TeacherProfile'));
 const SubmitJustification = lazy(() => import('./features/guardian/pages/SubmitJustification'));
+const GuardianSchedule = lazy(() => import('./features/guardian/pages/GuardianSchedule'));
+const GuardianDocuments = lazy(() => import('./features/guardian/pages/GuardianDocuments'));
+const GuardianProfile = lazy(() => import('./features/guardian/pages/GuardianProfile'));
+const IndependentSchedule = lazy(() => import('./features/independent/pages/IndependentSchedule'));
+const IndependentDocuments = lazy(() => import('./features/independent/pages/IndependentDocuments'));
+const IndependentProfile = lazy(() => import('./features/independent/pages/IndependentProfile'));
 
 const Login = ({ error }: { error: string | null }) => {
   const [showDebug, setShowDebug] = React.useState(false);
@@ -110,14 +122,26 @@ function App() {
           <Route path="/admin/subjects" element={<SubjectsManagement />} />
           <Route path="/admin/users" element={<UsersManagement />} />
           <Route path="/admin/invoices" element={<InvoicesManagement />} />
+          <Route path="/admin/schedule" element={<AdminSchedule />} />
+          <Route path="/admin/documents" element={<AdminDocuments />} />
+          <Route path="/admin/profile" element={<AdminProfile />} />
 
           {/* Teacher Routes */}
           <Route path="/teacher" element={<TeacherDashboard />} />
           <Route path="/teacher/attendance/:sessionId" element={<AttendanceMarking />} />
           <Route path="/teacher/payroll" element={<MyPayroll />} />
+          <Route path="/teacher/schedule" element={<TeacherSchedule />} />
+          <Route path="/teacher/documents" element={<TeacherDocuments />} />
+          <Route path="/teacher/profile" element={<TeacherProfile />} />
           <Route path="/guardian" element={<GuardianDashboard />} />
           <Route path="/guardian/justifications/new" element={<SubmitJustification />} />
-          <Route path="/independent/*" element={<IndependentDashboard />} />
+          <Route path="/guardian/schedule" element={<GuardianSchedule />} />
+          <Route path="/guardian/documents" element={<GuardianDocuments />} />
+          <Route path="/guardian/profile" element={<GuardianProfile />} />
+          <Route path="/independent" element={<IndependentDashboard />} />
+          <Route path="/independent/schedule" element={<IndependentSchedule />} />
+          <Route path="/independent/documents" element={<IndependentDocuments />} />
+          <Route path="/independent/profile" element={<IndependentProfile />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
