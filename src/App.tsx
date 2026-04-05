@@ -4,6 +4,8 @@ import { useTelegramAuth } from './hooks/useTelegramAuth';
 import { useAuthStore } from './stores/authStore';
 import { useTelegram } from './hooks/useTelegram';
 
+import './App.css';
+
 // Dashboard Pages (Lazy Loaded)
 const AdminDashboard = lazy(() => import('./features/admin/pages/AdminDashboard'));
 const TeacherDashboard = lazy(() => import('./features/teacher/pages/TeacherDashboard'));
@@ -90,7 +92,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--tg-theme-bg-color)] text-[var(--tg-theme-text-color)]">
+    <div className="min-h-screen bg-gray-100 text-gray-800">
       <Suspense fallback={
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--tg-theme-button-color)]"></div>
