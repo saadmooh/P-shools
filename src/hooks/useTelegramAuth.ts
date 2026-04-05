@@ -45,7 +45,8 @@ export function useTelegramAuth() {
         }
 
         if (existingUser) {
-          console.log('Existing user found with role:', existingUser.role);
+          console.log('Existing user found in DB. Role:', existingUser.role);
+          // Ensure we update the store with the most recent DB record
           setAuth(existingUser, 'session-token');
         } else {
           console.log('User not found. Auto-registering new user...');
