@@ -23,7 +23,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
         </div>
       </header>
 
-      <main className="flex-1 pb-24 p-5">
+      <main className="flex-1 pb-32 p-5">
         {children}
       </main>
 
