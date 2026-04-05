@@ -3,6 +3,7 @@ import { Calendar, Clock } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import Layout from '../../shared/Layout';
 
 const TeacherSchedule: React.FC = () => {
   const { user } = useAuthStore();
@@ -32,15 +33,14 @@ const TeacherSchedule: React.FC = () => {
     enabled: !!user?.id,
   });
 
-  if (isLoading) return <div className="p-4">Loading...</div>;
+  if (isLoading) return (
+    <Layout title="My Schedule">
+      <div className="flex justify-center p-8">Loading schedule...</div>
+    </Layout>
+  );
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <Calendar className="h-6 w-6" />
-        My Schedule
-      </h1>
-
+    <Layout title="My Schedule">
       <div className="space-y-4">
         {sessions?.map(session => {
           const title = session.groups?.name || session.courses?.name || session.topic || 'Session';
@@ -65,7 +65,7 @@ const TeacherSchedule: React.FC = () => {
           <p className="text-gray-500 text-center py-8">No upcoming sessions</p>
         )}
       </div>
-    </div>
+    </Layout>
   );
 };
 

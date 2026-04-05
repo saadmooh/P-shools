@@ -1,8 +1,9 @@
 import React from 'react';
-import { FileText, Download, DollarSign } from 'lucide-react';
+import { FileText, Download } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import Layout from '../../shared/Layout';
 
 const TeacherDocuments: React.FC = () => {
   const { user } = useAuthStore();
@@ -20,7 +21,11 @@ const TeacherDocuments: React.FC = () => {
     enabled: !!user?.id,
   });
 
-  if (teacherLoading) return <div className="p-4">Loading...</div>;
+  if (teacherLoading) return (
+    <Layout title="My Documents">
+      <div className="flex justify-center p-8">Loading documents...</div>
+    </Layout>
+  );
 
   // For now, just show teacher contract info
   const documents = [
@@ -34,12 +39,7 @@ const TeacherDocuments: React.FC = () => {
   ];
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <FileText className="h-6 w-6" />
-        My Documents
-      </h1>
-
+    <Layout title="My Documents">
       <div className="space-y-4">
         {documents.map(doc => (
           <div key={doc.id} className="bg-white p-4 rounded-lg shadow-sm border flex items-center justify-between">
@@ -58,7 +58,7 @@ const TeacherDocuments: React.FC = () => {
           <p className="text-gray-500 text-center py-8">No documents available</p>
         )}
       </div>
-    </div>
+    </Layout>
   );
 };
 

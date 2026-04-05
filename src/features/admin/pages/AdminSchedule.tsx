@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, Clock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import Layout from '../../shared/Layout';
 
 const AdminSchedule: React.FC = () => {
   const { data: sessions, isLoading } = useQuery({
@@ -26,15 +27,14 @@ const AdminSchedule: React.FC = () => {
     },
   });
 
-  if (isLoading) return <div className="p-4">Loading...</div>;
+  if (isLoading) return (
+    <Layout title="Admin Schedule">
+      <div className="flex justify-center p-8">Loading schedule...</div>
+    </Layout>
+  );
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <Calendar className="h-6 w-6" />
-        Admin Schedule
-      </h1>
-
+    <Layout title="Admin Schedule">
       <div className="space-y-4">
         {sessions?.map(session => {
           const title = session.groups?.name || session.courses?.name || session.topic || 'Session';
@@ -58,7 +58,7 @@ const AdminSchedule: React.FC = () => {
           <p className="text-gray-500 text-center py-8">No upcoming sessions</p>
         )}
       </div>
-    </div>
+    </Layout>
   );
 };
 

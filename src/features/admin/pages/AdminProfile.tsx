@@ -1,17 +1,13 @@
 import React from 'react';
 import { User, Mail, Phone } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
+import Layout from '../../shared/Layout';
 
 const AdminProfile: React.FC = () => {
   const { user } = useAuthStore();
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <User className="h-6 w-6" />
-        Admin Profile
-      </h1>
-
+    <Layout title="Admin Profile">
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
@@ -44,7 +40,7 @@ const AdminProfile: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 };
 

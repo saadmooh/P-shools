@@ -3,6 +3,7 @@ import { User, Mail, Phone, Users } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import Layout from '../../shared/Layout';
 
 const GuardianProfile: React.FC = () => {
   const { user } = useAuthStore();
@@ -33,12 +34,7 @@ const GuardianProfile: React.FC = () => {
   });
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <User className="h-6 w-6" />
-        My Profile
-      </h1>
-
+    <Layout title="My Profile">
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
@@ -79,7 +75,7 @@ const GuardianProfile: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 };
 

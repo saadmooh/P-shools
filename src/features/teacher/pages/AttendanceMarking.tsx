@@ -17,29 +17,40 @@ const AttendanceMarking: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
 
   // 1. Fetch students for this session (via group/course)
-  const { data: participants, isLoading } = useQuery({
+  const { data: sessionData, isLoading } = useQuery({
     queryKey: ['attendance', sessionId],
     queryFn: async () => {
       // First get the session to know group_id or course_id
       const { data: session } = await supabase
         .from('sessions')
-        .select('*')
+        .select('*, groups(id, name), courses(id, name)')
         .eq('id', sessionId)
         .single();
       
-      if (!session) return [];
+      if (!session) return { session: null, participants: [] };
 
+      let participants: any[] = [];
       // Get students enrolled in that group/course
       if (session.group_id) {
         const { data } = await supabase
           .from('group_enrollments')
           .select('students(*)')
           .eq('group_id', session.group_id);
-        return data?.map(d => ({ ...d.students, status: 'absent_unexcused' })) || [];
+        participants = data?.map(d => ({ ...d.students, status: 'absent_unexcused' })) || [];
+      } else if (session.course_id) {
+        const { data } = await supabase
+          .from('course_participants')
+          .select('users(*)')
+          .eq('course_id', session.course_id);
+        participants = data?.map(d => ({ ...d.users, status: 'absent_unexcused' })) || [];
       }
-      return [];
+
+      return { session, participants };
     }
   });
+
+  const participants = sessionData?.participants;
+  const session = sessionData?.session;
 
   const markAttendanceMutation = useMutation({
     mutationFn: async ({ studentId, status }: { studentId: string, status: string }) => {
@@ -47,10 +58,11 @@ const AttendanceMarking: React.FC = () => {
         .from('attendances')
         .upsert({
           session_id: sessionId,
-          student_id: studentId,
-          participant_type: 'student',
+          student_id: session?.group_id ? studentId : null,
+          independent_user_id: session?.course_id ? studentId : null,
+          participant_type: session?.group_id ? 'student' : 'independent',
           status: status,
-          hours_billed: 1.5, // Dummy duration
+          hours_billed: session?.duration_hours || 1, 
           updated_at: new Date().toISOString()
         });
       if (error) throw error;

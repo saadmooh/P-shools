@@ -1,18 +1,20 @@
 import React from 'react';
-import { Calendar, Clock, Users } from 'lucide-react';
+import { Calendar, Clock } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import Layout from '../../shared/Layout';
 
 const GuardianSchedule: React.FC = () => {
   const { user } = useAuthStore();
 
-  const { data: sessions, isLoading } = useQuery({
+  const { data: attendances, isLoading } = useQuery({
     queryKey: ['guardian-sessions', user?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('attendances')
         .select(`
+          id,
           sessions (
             id,
             scheduled_at,
@@ -20,31 +22,32 @@ const GuardianSchedule: React.FC = () => {
             topic,
             status,
             rooms (name),
-            groups (name, subjects (name), teachers (full_name)),
-            courses (name, teachers (full_name))
-          )
+            groups (name, subjects (name), teachers:teacher_id(full_name)),
+            courses (name, teachers:teacher_id(full_name))
+          ),
+          students!inner(guardian_id)
         `)
-        .eq('student.guardian_id', user?.id)
+        .eq('students.guardian_id', user?.id)
         .gte('sessions.scheduled_at', new Date().toISOString())
-        .order('sessions.scheduled_at')
-        .limit(10);
+        .order('sessions(scheduled_at)');
+      
+      if (error) throw error;
       return data;
     },
     enabled: !!user?.id,
   });
 
-  if (isLoading) return <div className="p-4">Loading...</div>;
+  if (isLoading) return (
+    <Layout title="Child's Schedule">
+      <div className="flex justify-center p-8">Loading schedule...</div>
+    </Layout>
+  );
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <Calendar className="h-6 w-6" />
-        Child's Schedule
-      </h1>
-
+    <Layout title="Child's Schedule">
       <div className="space-y-4">
-        {sessions?.map(attendance => {
-          const session = attendance.sessions;
+        {attendances?.map(attendance => {
+          const session = (attendance as any).sessions;
           if (!session) return null;
 
           const subject = session.groups?.subjects?.name;
@@ -65,11 +68,11 @@ const GuardianSchedule: React.FC = () => {
           );
         })}
 
-        {(!sessions || sessions.length === 0) && (
+        {(!attendances || attendances.length === 0) && (
           <p className="text-gray-500 text-center py-8">No upcoming sessions</p>
         )}
       </div>
-    </div>
+    </Layout>
   );
 };
 

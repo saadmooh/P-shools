@@ -3,6 +3,7 @@ import { FileText, Download, DollarSign } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import Layout from '../../shared/Layout';
 
 const GuardianDocuments: React.FC = () => {
   const { user } = useAuthStore();
@@ -28,15 +29,14 @@ const GuardianDocuments: React.FC = () => {
     enabled: !!user?.id,
   });
 
-  if (isLoading) return <div className="p-4">Loading...</div>;
+  if (isLoading) return (
+    <Layout title="My Documents">
+      <div className="flex justify-center p-8">Loading documents...</div>
+    </Layout>
+  );
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <FileText className="h-6 w-6" />
-        My Documents
-      </h1>
-
+    <Layout title="My Documents">
       <div className="space-y-4">
         {invoices?.map(invoice => {
           const title = `Invoice ${invoice.invoice_number}`;
@@ -70,7 +70,7 @@ const GuardianDocuments: React.FC = () => {
           <p className="text-gray-500 text-center py-8">No documents available</p>
         )}
       </div>
-    </div>
+    </Layout>
   );
 };
 

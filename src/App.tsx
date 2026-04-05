@@ -112,7 +112,7 @@ function App() {
       }>
         <Routes>
           <Route path="/" element={
-            !isAuthenticated ? <Login error={error} /> : <Navigate to={`/${user?.role}`} />
+            !isAuthenticated ? <Login error={error} /> : <Navigate to={`/${user?.role?.toLowerCase()}`} />
           } />
           
           {/* Admin Routes */}

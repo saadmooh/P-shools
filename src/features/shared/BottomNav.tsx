@@ -7,10 +7,10 @@ const BottomNav: React.FC = () => {
   const { user } = useAuthStore();
   
   const navItems = [
-    { label: 'Home', icon: LayoutDashboard, path: `/${user?.role}` },
-    { label: 'Schedule', icon: Calendar, path: `/${user?.role}/schedule` },
-    { label: 'Documents', icon: FileText, path: `/${user?.role}/documents` },
-    { label: 'Profile', icon: User, path: `/${user?.role}/profile` },
+    { label: 'Home', icon: LayoutDashboard, path: `/${user?.role?.toLowerCase()}` },
+    { label: 'Schedule', icon: Calendar, path: `/${user?.role?.toLowerCase()}/schedule` },
+    { label: 'Documents', icon: FileText, path: `/${user?.role?.toLowerCase()}/documents` },
+    { label: 'Profile', icon: User, path: `/${user?.role?.toLowerCase()}/profile` },
   ];
 
   return (
@@ -19,6 +19,7 @@ const BottomNav: React.FC = () => {
         <NavLink
           key={item.path}
           to={item.path}
+          end={item.label === 'Home'}
           className={({ isActive }) =>
             `flex flex-col items-center gap-0.5 py-1 px-3 rounded-lg transition-colors ${
               isActive ? 'text-zinc-900 bg-zinc-100' : 'text-zinc-400'
