@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 :root {
@@ -5,7 +9,7 @@
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
   --bg-accent: #f1f5f9;
-  
+
   --text-primary: #09090b;
   --text-secondary: #71717a;
   --text-accent: #2563eb;
