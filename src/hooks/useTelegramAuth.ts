@@ -50,13 +50,19 @@ export function useTelegramAuth() {
           setAuth(existingUser, 'session-token');
         } else {
           console.log('User not found. Auto-registering new user...');
-          // Auto-register new users as guardians (default)
           const fullName = [tgUser.firstName, tgUser.lastName].filter(Boolean).join(' ');
-          
+
+          // Check if this is the first user (grant admin role)
+          const { count } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true });
+
+          const isFirstUser = count === 0;
+
           const newUser = {
             id: tgUser.id.toString(),
             phone: '',
-            role: 'guardian' as const, // Default role
+            role: isFirstUser ? 'admin' as const : 'guardian' as const,
             is_active: true,
             full_name: fullName,
           };
