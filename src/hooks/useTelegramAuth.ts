@@ -32,6 +32,7 @@ export function useTelegramAuth() {
         // to your server for validation using the Bot Token.
         // For now, we use the user ID as our source of truth.
 
+        // Fetch user from Supabase to get the authoritative role
         const { data: existingUser, error: fetchError } = await supabase
           .from('users')
           .select('*')
@@ -44,17 +45,17 @@ export function useTelegramAuth() {
         }
 
         if (existingUser) {
-          console.log('Existing user found:', existingUser);
+          console.log('Existing user found with role:', existingUser.role);
           setAuth(existingUser, 'session-token');
         } else {
           console.log('User not found. Auto-registering new user...');
-          // Auto-register new users as guardians
+          // Auto-register new users as guardians (default)
           const fullName = [tgUser.firstName, tgUser.lastName].filter(Boolean).join(' ');
           
           const newUser = {
             id: tgUser.id.toString(),
-            phone: '', // Can be requested later using requestPhone() from useTelegram
-            role: 'guardian' as const,
+            phone: '',
+            role: 'guardian' as const, // Default role
             is_active: true,
             full_name: fullName,
           };
@@ -70,7 +71,7 @@ export function useTelegramAuth() {
             throw createError;
           }
           if (createdUser) {
-            console.log('New user registered successfully:', createdUser);
+            console.log('New user registered successfully with role:', createdUser.role);
             setAuth(createdUser, 'session-token');
           }
         }
