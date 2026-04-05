@@ -1,11 +1,36 @@
 import React from 'react';
 import { FileText, Download, DollarSign } from 'lucide-react';
+import { useAuthStore } from '../../../stores/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../../../lib/supabase';
 
 const TeacherDocuments: React.FC = () => {
-  // Placeholder data
+  const { user } = useAuthStore();
+
+  const { data: teacher, isLoading: teacherLoading } = useQuery({
+    queryKey: ['teacher', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('teachers')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  if (teacherLoading) return <div className="p-4">Loading...</div>;
+
+  // For now, just show teacher contract info
   const documents = [
-    { id: 1, title: 'Payroll January 2024', type: 'PDF', size: '1.2 MB', amount: '$1200' },
-    { id: 2, title: 'Contract 2024', type: 'PDF', size: '2.1 MB' },
+    {
+      id: 1,
+      title: 'Teacher Contract',
+      type: 'PDF',
+      size: '2.1 MB',
+      description: `Contract for ${user?.full_name}`,
+    },
   ];
 
   return (
@@ -19,12 +44,9 @@ const TeacherDocuments: React.FC = () => {
         {documents.map(doc => (
           <div key={doc.id} className="bg-white p-4 rounded-lg shadow-sm border flex items-center justify-between">
             <div>
-              <h3 className="font-semibold flex items-center gap-2">
-                {doc.title}
-                {doc.amount && <DollarSign className="h-4 w-4 text-green-600" />}
-              </h3>
+              <h3 className="font-semibold">{doc.title}</h3>
               <p className="text-sm text-gray-600">{doc.type} • {doc.size}</p>
-              {doc.amount && <p className="text-sm text-green-600 font-medium">{doc.amount}</p>}
+              <p className="text-sm text-gray-600">{doc.description}</p>
             </div>
             <button className="p-2 text-blue-600 hover:bg-blue-50 rounded">
               <Download className="h-4 w-4" />

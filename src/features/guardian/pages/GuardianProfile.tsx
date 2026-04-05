@@ -1,9 +1,36 @@
 import React from 'react';
 import { User, Mail, Phone, Users } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../../../lib/supabase';
 
 const GuardianProfile: React.FC = () => {
   const { user } = useAuthStore();
+
+  const { data: guardian } = useQuery({
+    queryKey: ['guardian', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('guardians')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: students } = useQuery({
+    queryKey: ['students', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('students')
+        .select('*')
+        .eq('guardian_id', user?.id);
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 
   return (
     <div className="p-4">
@@ -42,7 +69,7 @@ const GuardianProfile: React.FC = () => {
             <Users className="h-5 w-5 text-gray-400" />
             <div>
               <p className="text-sm text-gray-600">Children</p>
-              <p className="font-medium">2 students enrolled</p>
+              <p className="font-medium">{students?.length || 0} students enrolled</p>
             </div>
           </div>
 

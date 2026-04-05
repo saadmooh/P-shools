@@ -1,9 +1,24 @@
 import React from 'react';
 import { User, Mail, Phone, BookOpen, DollarSign } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../../../lib/supabase';
 
 const TeacherProfile: React.FC = () => {
   const { user } = useAuthStore();
+
+  const { data: teacher } = useQuery({
+    queryKey: ['teacher', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('teachers')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 
   return (
     <div className="p-4">
@@ -42,7 +57,7 @@ const TeacherProfile: React.FC = () => {
             <BookOpen className="h-5 w-5 text-gray-400" />
             <div>
               <p className="text-sm text-gray-600">Specialty</p>
-              <p className="font-medium">Mathematics</p>
+              <p className="font-medium">{teacher?.specialty || 'N/A'}</p>
             </div>
           </div>
 
@@ -50,7 +65,7 @@ const TeacherProfile: React.FC = () => {
             <DollarSign className="h-5 w-5 text-gray-400" />
             <div>
               <p className="text-sm text-gray-600">Rate per Hour</p>
-              <p className="font-medium">$25.00</p>
+              <p className="font-medium">${teacher?.base_rate_per_hour || 'N/A'}</p>
             </div>
           </div>
 

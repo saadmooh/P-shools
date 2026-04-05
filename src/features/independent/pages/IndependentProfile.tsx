@@ -1,9 +1,33 @@
 import React from 'react';
 import { User, Mail, Phone, BookOpen } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../../../lib/supabase';
 
 const IndependentProfile: React.FC = () => {
   const { user } = useAuthStore();
+
+  const { data: courses } = useQuery({
+    queryKey: ['independent-courses', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('attendances')
+        .select(`
+          sessions (
+            course_id,
+            courses (
+              name
+            )
+          )
+        `)
+        .eq('independent_user_id', user?.id)
+        .eq('sessions.status', 'scheduled');
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const uniqueCourses = [...new Set(courses?.map(a => a.sessions?.courses?.name).filter(Boolean))];
 
   return (
     <div className="p-4">
@@ -42,7 +66,7 @@ const IndependentProfile: React.FC = () => {
             <BookOpen className="h-5 w-5 text-gray-400" />
             <div>
               <p className="text-sm text-gray-600">Enrolled Courses</p>
-              <p className="font-medium">Mathematics, Science</p>
+              <p className="font-medium">{uniqueCourses.join(', ') || 'None'}</p>
             </div>
           </div>
 

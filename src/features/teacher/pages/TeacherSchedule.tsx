@@ -1,12 +1,38 @@
 import React from 'react';
 import { Calendar, Clock } from 'lucide-react';
+import { useAuthStore } from '../../../stores/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../../../lib/supabase';
 
 const TeacherSchedule: React.FC = () => {
-  // Placeholder data
-  const sessions = [
-    { id: 1, title: 'Math Group A', time: '2024-01-15 10:00', room: 'Room 101', students: 5 },
-    { id: 2, title: 'Physics Course', time: '2024-01-16 14:00', room: 'Room 202', students: 3 },
-  ];
+  const { user } = useAuthStore();
+
+  const { data: sessions, isLoading } = useQuery({
+    queryKey: ['teacher-sessions', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('sessions')
+        .select(`
+          id,
+          scheduled_at,
+          duration_hours,
+          topic,
+          status,
+          rooms (name),
+          groups (name, subjects (name)),
+          courses (name),
+          attendances (count)
+        `)
+        .eq('teacher_id', user?.id)
+        .gte('scheduled_at', new Date().toISOString())
+        .order('scheduled_at')
+        .limit(10);
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  if (isLoading) return <div className="p-4">Loading...</div>;
 
   return (
     <div className="p-4">
@@ -16,18 +42,26 @@ const TeacherSchedule: React.FC = () => {
       </h1>
 
       <div className="space-y-4">
-        {sessions.map(session => (
-          <div key={session.id} className="bg-white p-4 rounded-lg shadow-sm border">
-            <h3 className="font-semibold">{session.title}</h3>
-            <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-              <Clock className="h-4 w-4" />
-              {session.time} - {session.room}
-            </div>
-            <p className="text-sm text-gray-600 mt-1">{session.students} students</p>
-          </div>
-        ))}
+        {sessions?.map(session => {
+          const title = session.groups?.name || session.courses?.name || session.topic || 'Session';
+          const subject = session.groups?.subjects?.name;
+          const time = new Date(session.scheduled_at).toLocaleString();
+          const room = session.rooms?.name;
+          const studentCount = session.attendances?.[0]?.count || 0;
 
-        {sessions.length === 0 && (
+          return (
+            <div key={session.id} className="bg-white p-4 rounded-lg shadow-sm border">
+              <h3 className="font-semibold">{subject ? `${subject} - ${title}` : title}</h3>
+              <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                <Clock className="h-4 w-4" />
+                {time} - {room}
+              </div>
+              <p className="text-sm text-gray-600 mt-1">{session.duration_hours}h • {studentCount} students • {session.status}</p>
+            </div>
+          );
+        })}
+
+        {(!sessions || sessions.length === 0) && (
           <p className="text-gray-500 text-center py-8">No upcoming sessions</p>
         )}
       </div>

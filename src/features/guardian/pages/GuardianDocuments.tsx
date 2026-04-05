@@ -1,12 +1,34 @@
 import React from 'react';
 import { FileText, Download, DollarSign } from 'lucide-react';
+import { useAuthStore } from '../../../stores/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../../../lib/supabase';
 
 const GuardianDocuments: React.FC = () => {
-  // Placeholder data
-  const documents = [
-    { id: 1, title: 'Invoice January 2024', type: 'PDF', size: '1.5 MB', amount: '$150', status: 'Paid' },
-    { id: 2, title: 'Receipt February 2024', type: 'PDF', size: '0.8 MB', amount: '$150', status: 'Pending' },
-  ];
+  const { user } = useAuthStore();
+
+  const { data: invoices, isLoading } = useQuery({
+    queryKey: ['guardian-invoices', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('invoices')
+        .select(`
+          id,
+          invoice_number,
+          total_amount,
+          status,
+          due_date,
+          created_at
+        `)
+        .eq('guardian_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  if (isLoading) return <div className="p-4">Loading...</div>;
 
   return (
     <div className="p-4">
@@ -16,27 +38,35 @@ const GuardianDocuments: React.FC = () => {
       </h1>
 
       <div className="space-y-4">
-        {documents.map(doc => (
-          <div key={doc.id} className="bg-white p-4 rounded-lg shadow-sm border flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold flex items-center gap-2">
-                {doc.title}
-                <span className={`px-2 py-1 text-xs rounded ${
-                  doc.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {doc.status}
-                </span>
-              </h3>
-              <p className="text-sm text-gray-600">{doc.type} • {doc.size}</p>
-              <p className="text-sm text-green-600 font-medium">{doc.amount}</p>
-            </div>
-            <button className="p-2 text-blue-600 hover:bg-blue-50 rounded">
-              <Download className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
+        {invoices?.map(invoice => {
+          const title = `Invoice ${invoice.invoice_number}`;
+          const type = 'PDF';
+          const size = `${(invoice.total_amount / 1000).toFixed(1)} KB`; // Approximate
 
-        {documents.length === 0 && (
+          return (
+            <div key={invoice.id} className="bg-white p-4 rounded-lg shadow-sm border flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold flex items-center gap-2">
+                  {title}
+                  <span className={`px-2 py-1 text-xs rounded ${
+                    invoice.status === 'paid' ? 'bg-green-100 text-green-800' :
+                    invoice.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {invoice.status}
+                  </span>
+                </h3>
+                <p className="text-sm text-gray-600">{type} • {size} • Due: {new Date(invoice.due_date).toLocaleDateString()}</p>
+                <p className="text-sm text-green-600 font-medium">${invoice.total_amount}</p>
+              </div>
+              <button className="p-2 text-blue-600 hover:bg-blue-50 rounded">
+                <Download className="h-4 w-4" />
+              </button>
+            </div>
+          );
+        })}
+
+        {(!invoices || invoices.length === 0) && (
           <p className="text-gray-500 text-center py-8">No documents available</p>
         )}
       </div>
