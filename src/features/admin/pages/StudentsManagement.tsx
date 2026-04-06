@@ -56,6 +56,19 @@ const StudentsManagement: React.FC = () => {
 
       {isLoading ? (
         <div className="flex justify-center p-8">Loading students...</div>
+      ) : students?.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 text-center">
+          <div className="w-16 h-16 rounded-full bg-zinc-100 flex items-center justify-center mb-4">
+            <QrCode size={24} className="text-zinc-400" />
+          </div>
+          <h3 className="text-lg font-bold text-zinc-900 mb-2">No Students Found</h3>
+          <p className="text-sm text-zinc-500 mb-4">
+            Students will appear here once they're enrolled in the system.
+          </p>
+          <Button size="sm" onClick={() => navigate('/admin')}>
+            Go to Dashboard
+          </Button>
+        </div>
       ) : (
         <div className="space-y-3">
           {students?.map((student) => (
