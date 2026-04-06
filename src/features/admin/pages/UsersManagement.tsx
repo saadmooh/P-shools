@@ -254,22 +254,10 @@ const UsersManagement: React.FC = () => {
                     <Button variant="ghost" size="sm" className="p-2" onClick={() => handleEdit(user)}>
                       <Edit size={16} />
                     </Button>
-                    <Button variant="ghost" size="sm" className="p-2 text-red-500" onClick={() =u003e {
+                    <Button variant="ghost" size="sm" className="p-2 text-red-500" onClick={() => {
                       setShowDeleteModal(true);
                       setDeletingUserId(user.id);
                     }}>
-                      <Trash2 size={16} />
-                    </Button>
-                      <Trash2 size={16} />
-                    </Button>
-                      <Trash2 size={16} />
-                    </Button>
-                      <Trash2 size={16} />
-                    </Button>
-                      <Trash2 size={16} />
-                    </Button>
-                      <Trash2 size={16} />
-                    </Button>
                       <Trash2 size={16} />
                     </Button>
                   </div>
@@ -285,57 +273,57 @@ const UsersManagement: React.FC = () => {
 
       {/* Edit User Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6" onClick={() =u003e setShowEditModal(false)}u003e
-          <Card className="w-full max-w-md animate-in zoom-in duration-200" onClick={(e) =u003e e.stopPropagation()}u003e
-            <CardContent className="p-6"u003e
-              <h3 className="font-bold text-lg mb-4"u003eEdit Useru003c/h3>
-              <form className="space-y-3"u003e
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6" onClick={() => setShowEditModal(false)}>
+          <Card className="w-full max-w-md animate-in zoom-in duration-200" onClick={(e) => e.stopPropagation()}>
+            <CardContent className="p-6">
+              <h3 className="font-bold text-lg mb-4">Edit User</h3>
+              <form className="space-y-3">
                 <Input
                   label="Full Name"
                   value={formData.full_name}
-                  onChange={(e) =u003e setFormData({...formData, full_name: e.target.value})}u003e
+                  onChange={(e) => setFormData({...formData, full_name: e.target.value})}>
                 </Input>
                 <Input
                   label="Email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) =u003e setFormData({...formData, email: e.target.value})}u003e
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}>
                 </Input>
                 <Input
                   label="Phone"
                   value={formData.phone}
-                  onChange={(e) =u003e setFormData({...formData, phone: e.target.value})}u003e
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}>
                 </Input>
                 <Select
                   label="Role"
                   value={formData.role_id}
-                  onChange={(e) =u003e setFormData({...formData, role_id: e.target.value})}u003e
-                  <option value=""u003eSelect Role</option>
-                  {roles?.map(role =u003e (
-                    <option key={role.id} value={role.id}u003e{role.name}u003c/option>
-                  ))}u003e
+                  onChange={(e) => setFormData({...formData, role_id: e.target.value})}>
+                  <option value="">Select Role</option>
+                  {roles?.map(role => (
+                    <option key={role.id} value={role.id}>{role.name}</option>
+                  ))}
                 </Select>
-                <div className="flex gap-2"u003e
-                  <Button onClick={() =u003e setShowEditModal(false)}u003eCancelu003c/Button>
-                  <Button onClick={handleEditUser} disabled={!formData.full_name || !formData.email || !formData.role_id}u003eUpdateu003c/Button>
+                <div className="flex gap-2">
+                  <Button onClick={() => setShowEditModal(false)}>Cancel</Button>
+                  <Button onClick={handleEditUser} disabled={!formData.full_name || !formData.email || !formData.role_id}>Update</Button>
                 </div>
               </form>
             </CardContent>
           </Card>
         </div>
-      )}u003e
+      )}
 
       {/* Delete User Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6" onClick={() =u003e setShowDeleteModal(false)}u003e
-          <Card className="w-full max-w-xs animate-in zoom-in duration-200" onClick={(e) =u003e e.stopPropagation()}u003e
-            <CardContent className="p-6 text-center"u003e
-              <Shield size={48} className="text-red-500 mb-4" /u003e
-              <h3 className="font-bold text-lg mb-2"u003eDelete Useru003c/h3>
-              <p className="text-sm text-[var(--tg-theme-hint-color)] mb-4"u003eAre you sure you want to delete this user? This action cannot be undone.u003c/p>
-              <div className="flex gap-2"u003e
-                <Button onClick={() =u003e setShowDeleteModal(false)}u003eCancelu003c/Button>
-                <Button variant="destructive" onClick={handleDeleteUser}u003eDeleteu003c/Button>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6" onClick={() => setShowDeleteModal(false)}>
+          <Card className="w-full max-w-xs animate-in zoom-in duration-200" onClick={(e) => e.stopPropagation()}>
+            <CardContent className="p-6 text-center">
+              <Shield size={48} className="text-red-500 mb-4" />
+              <h3 className="font-bold text-lg mb-2">Delete User</h3>
+              <p className="text-sm text-[var(--tg-theme-hint-color)] mb-4">Are you sure you want to delete this user? This action cannot be undone.</p>
+              <div className="flex gap-2">
+                <Button onClick={() => setShowDeleteModal(false)}>Cancel</Button>
+                <Button variant="destructive" onClick={handleDeleteUser}>Delete</Button>
               </div>
             </CardContent>
           </Card>

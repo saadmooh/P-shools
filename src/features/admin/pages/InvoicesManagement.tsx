@@ -6,7 +6,7 @@ import Layout from '../../shared/Layout';
 import Button from '../../../components/ui/Button';
 import Card, { CardContent } from '../../../components/ui/Card';
 import Input from '../../../components/ui/Input';
-import Select from "../../components/ui/Select";
+import Select from "../../../components/ui/Select";
 import { invoicesService, Invoice } from '../../../services/supabase/billing';
 import { useTelegram } from '../../../hooks/useTelegram';
 import { useAuthPermissions, PERMISSIONS } from '../../../lib/permissions';

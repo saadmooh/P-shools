@@ -1,20 +1,18 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import svgr from 'vite-plugin-svgr';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { copyFileSync, mkdirSync, existsSync } from 'fs'
 
+// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    svgr(),
-    nodePolyfills({
-      globals: {
-        Buffer: true,
-        global: true,
-        process: true,
-      },
-      protocolImports: true,
-    }),
+    {
+      name: 'copy-404',
+      closeBundle() {
+        if (!existsSync('dist')) mkdirSync('dist', { recursive: true })
+        copyFileSync('404.html', 'dist/404.html')
+      }
+    }
   ],
-  // base: '/customer-loyalty-app/', // Uncomment this if you deploy to a subdirectory
-});
+  base: '/P-shools/',
+})

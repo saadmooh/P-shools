@@ -82,7 +82,7 @@ const StudentsManagement: React.FC = () => {
     },
     onError: (error: any) => {
       console.error("Failed to create student:", error);
-      alert(Failed to add student: \${error.message}\`);
+      alert(`Failed to add student: ${error.message}`);
     }
   });
 
@@ -97,7 +97,7 @@ const StudentsManagement: React.FC = () => {
     },
     onError: (error: any) => {
       console.error("Failed to update student:", error);
-      alert(Failed to update student: \${error.message}\`);
+      alert(`Failed to update student: ${error.message}`);
     }
   });
 
@@ -111,7 +111,7 @@ const StudentsManagement: React.FC = () => {
     },
     onError: (error: any) => {
       console.error("Failed to delete student:", error);
-      alert(Failed to delete student: \${error.message}\`);
+      alert(`Failed to delete student: ${error.message}`);
     }
   });
 

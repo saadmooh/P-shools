@@ -1,3 +1,0 @@
--- Seeding File
--- No INSERT statements found in the migration files.
--- This file is intended for data seeding operations.

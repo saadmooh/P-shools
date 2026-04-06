@@ -214,6 +214,21 @@ export function usePermissions() {
   return { checkPermission, checkRole };
 }
 
+// Alias for useAuthPermissions
+export function useAuthPermissions() {
+  const { checkPermission, checkRole } = usePermissions();
+  const checkIsAdmin = async (): Promise<boolean> => {
+    const user = await getCurrentUser();
+    if (!user) return false;
+    return hasRole(user.id, 'admin');
+  };
+  
+  return { 
+    hasPermission: checkPermission, 
+    isAdmin: checkIsAdmin 
+  };
+}
+
 // Helper function - you'll need to implement this based on your auth system
 async function getCurrentUser() {
   const { data: { user } } = await supabase.auth.getUser();
