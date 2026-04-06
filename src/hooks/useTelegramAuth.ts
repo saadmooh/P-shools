@@ -32,7 +32,7 @@ export function useTelegramAuth() {
         // to your server for validation using the Bot Token.
         // For now, we use the user ID as our source of truth.
 
-        // Fetch user from Supabase to get the authoritative role
+        // Fetch user from Supabase
         const { data: existingUser, error: fetchError } = await supabase
           .from('users')
           .select('*')
@@ -45,7 +45,7 @@ export function useTelegramAuth() {
         }
 
         if (existingUser) {
-          console.log('Existing user found in DB. Role:', existingUser.role);
+          console.log('Existing user found in DB:', existingUser.full_name);
           // Ensure we update the store with the most recent DB record
           setAuth(existingUser, 'session-token');
         } else {
@@ -62,7 +62,6 @@ export function useTelegramAuth() {
           const newUser = {
             id: tgUser.id.toString(),
             phone: '',
-            role: isFirstUser ? 'admin' as const : 'guardian' as const,
             is_active: true,
             full_name: fullName,
           };
@@ -77,8 +76,27 @@ export function useTelegramAuth() {
             console.error('Supabase registration error:', createError);
             throw createError;
           }
+
           if (createdUser) {
-            console.log('New user registered successfully with role:', createdUser.role);
+            // Assign role to the new user
+            const roleName = isFirstUser ? 'Super Admin' : 'Guardian';
+            const { data: roleData } = await supabase
+              .from('roles')
+              .select('id')
+              .eq('name', roleName)
+              .single();
+
+            if (roleData) {
+              await supabase
+                .from('user_roles')
+                .insert({
+                  user_id: createdUser.id,
+                  role_id: roleData.id,
+                  assigned_by: createdUser.id
+                });
+            }
+
+            console.log('New user registered successfully with role:', roleName);
             setAuth(createdUser, 'session-token');
           }
         }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -6,10 +6,60 @@ import Layout from '../../shared/Layout';
 import Card, { CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Users, BookOpen, Calendar, CreditCard, Shield, ArrowRight } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import { useAuthPermissions, PERMISSIONS } from '../../../lib/permissions';
 
 const AdminDashboard: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { hasPermission, permissions } = useAuthPermissions();
+  const [availableStats, setAvailableStats] = useState<any[]>([]);
+  const [availableActions, setAvailableActions] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadPermissions = async () => {
+      const baseStats = [];
+      const baseActions = [];
+
+      // Check permissions and add items accordingly
+      if (await hasPermission(PERMISSIONS.USERS_READ) || permissions.includes('users.manage')) {
+        baseStats.push({ label: 'Users', value: '0', icon: Users, color: 'text-blue-600', path: '/admin/users' });
+      }
+
+      if (await hasPermission(PERMISSIONS.SUBJECTS_READ)) {
+        baseStats.push({ label: 'Groups', value: '0', icon: BookOpen, color: 'text-green-600', path: '/admin/subjects' });
+      }
+
+      if (await hasPermission(PERMISSIONS.SESSIONS_READ)) {
+        baseStats.push({ label: 'Sessions', value: '0', icon: Calendar, color: 'text-purple-600', path: '/admin/schedule' });
+      }
+
+      if (await hasPermission(PERMISSIONS.INVOICES_READ)) {
+        baseStats.push({ label: 'Pending', value: '0', icon: CreditCard, color: 'text-orange-600', path: '/admin/invoices' });
+      }
+
+      // Actions
+      if (await hasPermission(PERMISSIONS.STUDENTS_MANAGE)) {
+        baseActions.push({ label: 'Manage Students', icon: Users, path: '/admin/students' });
+      }
+
+      if (await hasPermission(PERMISSIONS.SUBJECTS_MANAGE)) {
+        baseActions.push({ label: 'Subjects & Levels', icon: BookOpen, path: '/admin/subjects' });
+      }
+
+      if (permissions.includes('users.manage')) {
+        baseActions.push({ label: 'User Permissions', icon: Shield, path: '/admin/users' });
+      }
+
+      if (await hasPermission(PERMISSIONS.INVOICES_MANAGE)) {
+        baseActions.push({ label: 'Invoices & Payments', icon: CreditCard, path: '/admin/invoices' });
+      }
+
+      setAvailableStats(baseStats);
+      setAvailableActions(baseActions);
+    };
+
+    loadPermissions();
+  }, [hasPermission, permissions]);
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin_stats'],
@@ -26,21 +76,25 @@ const AdminDashboard: React.FC = () => {
         supabase.from('invoices').select('*', { count: 'exact', head: true }).neq('status', 'paid').neq('status', 'cancelled')
       ]);
 
-      return [
-        { label: 'Users', value: usersCount?.toString() || '0', icon: Users, color: 'text-blue-600', path: '/admin/users' },
-        { label: 'Groups', value: groupsCount?.toString() || '0', icon: BookOpen, color: 'text-green-600', path: '/admin/subjects' },
-        { label: 'Sessions', value: sessionsCount?.toString() || '0', icon: Calendar, color: 'text-purple-600', path: '/admin/schedule' },
-        { label: 'Pending', value: pendingInvoicesCount?.toString() || '0', icon: CreditCard, color: 'text-orange-600', path: '/admin/invoices' },
-      ];
+      const result = [];
+
+      // Only add stats that user has permission for
+      if (availableStats.some(s => s.label === 'Users')) {
+        result.push({ label: 'Users', value: usersCount?.toString() || '0', icon: Users, color: 'text-blue-600', path: '/admin/users' });
+      }
+      if (availableStats.some(s => s.label === 'Groups')) {
+        result.push({ label: 'Groups', value: groupsCount?.toString() || '0', icon: BookOpen, color: 'text-green-600', path: '/admin/subjects' });
+      }
+      if (availableStats.some(s => s.label === 'Sessions')) {
+        result.push({ label: 'Sessions', value: sessionsCount?.toString() || '0', icon: Calendar, color: 'text-purple-600', path: '/admin/schedule' });
+      }
+      if (availableStats.some(s => s.label === 'Pending')) {
+        result.push({ label: 'Pending', value: pendingInvoicesCount?.toString() || '0', icon: CreditCard, color: 'text-orange-600', path: '/admin/invoices' });
+      }
+
+      return result;
     }
   });
-
-  const actions = [
-    { label: 'Manage Students', icon: Users, path: '/admin/students' },
-    { label: 'Subjects & Levels', icon: BookOpen, path: '/admin/subjects' },
-    { label: 'User Permissions', icon: Shield, path: '/admin/users' },
-    { label: 'Invoices & Payments', icon: CreditCard, path: '/admin/invoices' },
-  ];
 
   return (
     <Layout title={t('dashboards.admin_title')}>
@@ -71,7 +125,7 @@ const AdminDashboard: React.FC = () => {
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide">Quick Actions</h2>
         <div className="space-y-2">
-          {actions.map((action) => (
+          {availableActions.map((action) => (
             <Card 
               key={action.path}
               className="cursor-pointer active:scale-[0.99] transition-transform"

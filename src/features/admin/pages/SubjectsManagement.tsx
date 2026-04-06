@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, ArrowLeft, BookOpen, Layers } from 'lucide-react';
+import { Plus, ArrowLeft, BookOpen, Layers, ShieldX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../shared/Layout';
 import Button from '../../../components/ui/Button';
@@ -8,18 +8,56 @@ import Card, { CardContent } from '../../../components/ui/Card';
 import Input from '../../../components/ui/Input';
 import { levelsService, subjectsService } from '../../../services/supabase/subjects';
 import { useTelegram } from '../../../hooks/useTelegram';
+import { useAuthPermissions, PERMISSIONS } from '../../../lib/permissions';
 
 const SubjectsManagement: React.FC = () => {
   const navigate = useNavigate();
   const { hapticFeedback } = useTelegram();
   const queryClient = useQueryClient();
+  const { hasPermission, isAdmin } = useAuthPermissions();
   const [isAddingLevel, setIsAddingLevel] = useState(false);
   const [isAddingSubject, setIsAddingSubject] = useState<string | null>(null);
   const [newLevel, setNewLevel] = useState({ name: '', sort_order: 0 });
   const [newSubject, setNewSubject] = useState({ name: '', code: '', default_price_per_hour: 0, level_id: '' });
+  const [canManageSubjects, setCanManageSubjects] = useState(false);
 
-  const { data: levels } = useQuery({ queryKey: ['levels'], queryFn: levelsService.getAll });
-  const { data: subjects, isLoading } = useQuery({ queryKey: ['subjects'], queryFn: subjectsService.getAll });
+  useEffect(() => {
+    const checkPermissions = async () => {
+      const hasAccess = await hasPermission(PERMISSIONS.SUBJECTS_MANAGE) || isAdmin();
+      setCanManageSubjects(hasAccess);
+    };
+    checkPermissions();
+  }, [hasPermission, isAdmin]);
+
+  const { data: levels } = useQuery({
+    queryKey: ['levels'],
+    queryFn: levelsService.getAll,
+    enabled: canManageSubjects
+  });
+  const { data: subjects, isLoading } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: subjectsService.getAll,
+    enabled: canManageSubjects
+  });
+
+  // Show access denied if user doesn't have permission
+  if (!canManageSubjects) {
+    return (
+      <Layout title="Access Denied">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+          <ShieldX size={64} className="text-red-500 mb-4" />
+          <h2 className="text-2xl font-bold text-zinc-900 mb-2">Access Denied</h2>
+          <p className="text-zinc-600 mb-6 max-w-md">
+            You don't have permission to manage subjects and levels.
+            Contact your administrator if you need access.
+          </p>
+          <Button onClick={() => navigate('/admin')}>
+            Return to Dashboard
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   const createLevelMutation = useMutation({
     mutationFn: levelsService.create,
@@ -38,6 +76,10 @@ const SubjectsManagement: React.FC = () => {
       setIsAddingSubject(null);
       setNewSubject({ name: '', code: '', default_price_per_hour: 0, level_id: '' });
       hapticFeedback('light');
+    },
+    onError: (error) => {
+      console.error("Failed to create subject:", error);
+      alert(`Failed to add subject: ${error.message}`); // Basic error feedback
     }
   });
 

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, ArrowLeft, QrCode, Search } from 'lucide-react';
+import { Plus, ArrowLeft, QrCode, Search, ShieldX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import Layout from '../../shared/Layout';
@@ -9,13 +9,43 @@ import Card, { CardContent } from '../../../components/ui/Card';
 import Input from '../../../components/ui/Input';
 import { supabase } from '../../../lib/supabase';
 import { useTelegram } from '../../../hooks/useTelegram';
+import { useAuthPermissions, PERMISSIONS } from '../../../lib/permissions';
 
 const StudentsManagement: React.FC = () => {
   const navigate = useNavigate();
   const { hapticFeedback } = useTelegram();
   const queryClient = useQueryClient();
+  const { hasPermission, isAdmin } = useAuthPermissions();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [canManageStudents, setCanManageStudents] = useState(false);
+
+  useEffect(() => {
+    const checkPermissions = async () => {
+      const hasAccess = await hasPermission(PERMISSIONS.STUDENTS_MANAGE) || isAdmin();
+      setCanManageStudents(hasAccess);
+    };
+    checkPermissions();
+  }, [hasPermission, isAdmin]);
+
+  // Show access denied if user doesn't have permission
+  if (!canManageStudents) {
+    return (
+      <Layout title="Access Denied">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+          <ShieldX size={64} className="text-red-500 mb-4" />
+          <h2 className="text-2xl font-bold text-zinc-900 mb-2">Access Denied</h2>
+          <p className="text-zinc-600 mb-6 max-w-md">
+            You don't have permission to manage students.
+            Contact your administrator if you need access.
+          </p>
+          <Button onClick={() => navigate('/admin')}>
+            Return to Dashboard
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   const { data: students, isLoading } = useQuery({
     queryKey: ['students', searchTerm],
