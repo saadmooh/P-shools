@@ -271,6 +271,56 @@ CREATE INDEX idx_group_enrollments_student_id ON group_enrollments(student_id);
 CREATE INDEX idx_group_enrollments_group_id ON group_enrollments(group_id);
 CREATE INDEX idx_absence_justifications_attendance_id ON absence_justifications(attendance_id);
 
+-- EMS: Dynamic Roles and Permissions System
+
+-- 1. Create permissions table
+CREATE TABLE permissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    resource VARCHAR(100) NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Create roles table
+CREATE TABLE roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    is_system_role BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. Create role_permissions junction table
+CREATE TABLE role_permissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(role_id, permission_id)
+);
+
+-- 4. Create user_roles table
+CREATE TABLE user_roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    assigned_by TEXT REFERENCES users(id),
+    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    is_active BOOLEAN DEFAULT true,
+    UNIQUE(user_id, role_id)
+);
+
+-- 5. Add indexes for dynamic roles system
+CREATE INDEX idx_permissions_resource_action ON permissions(resource, action);
+CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
+CREATE INDEX idx_user_roles_role_id ON user_roles(role_id);
+CREATE INDEX idx_role_permissions_role_id ON role_permissions(role_id);
+CREATE INDEX idx_role_permissions_permission_id ON role_permissions(permission_id);
+
 -- EMS: Education Management System - RLS Policies
 
 -- 1. Enable RLS on the users table (if not already enabled)
@@ -302,7 +352,7 @@ BEGIN
         SELECT tablename
         FROM pg_tables
         WHERE schemaname = 'public'
-        AND tablename IN ('users', 'guardians', 'teachers', 'students', 'rooms', 'school_levels', 'subjects', 'groups', 'courses', 'sessions', 'attendances', 'invoices', 'system_settings', 'course_participants', 'group_enrollments', 'absence_justifications')
+        AND tablename IN ('users', 'guardians', 'teachers', 'students', 'rooms', 'school_levels', 'subjects', 'groups', 'courses', 'sessions', 'attendances', 'invoices', 'system_settings', 'course_participants', 'group_enrollments', 'absence_justifications', 'permissions', 'roles', 'role_permissions', 'user_roles')
     LOOP
         -- Enable RLS
         EXECUTE 'ALTER TABLE IF EXISTS ' || table_name || ' ENABLE ROW LEVEL SECURITY';
@@ -393,6 +443,61 @@ CREATE POLICY "Teachers and admins can review justifications" ON absence_justifi
             SELECT 1 FROM users u
             WHERE u.id = auth.uid()::text
             AND u.role IN ('admin', 'teacher')
+        )
+    );
+
+-- RLS Policies for dynamic roles system
+-- Permissions table - only admins can manage
+CREATE POLICY "Admins can manage permissions" ON permissions
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = auth.uid()::text
+            AND ur.is_active = true
+            AND r.name IN ('Super Admin', 'School Admin')
+        )
+    );
+
+-- Roles table - admins can manage non-system roles
+CREATE POLICY "Admins can manage roles" ON roles
+    FOR SELECT USING (true);
+
+CREATE POLICY "Admins can create and update roles" ON roles
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = auth.uid()::text
+            AND ur.is_active = true
+            AND r.name IN ('Super Admin', 'School Admin')
+        ) AND (is_system_role = false OR is_system_role IS NULL)
+    );
+
+-- Role permissions - admins can manage
+CREATE POLICY "Admins can manage role permissions" ON role_permissions
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = auth.uid()::text
+            AND ur.is_active = true
+            AND r.name IN ('Super Admin', 'School Admin')
+        )
+    );
+
+-- User roles - users can view their own, admins can manage all
+CREATE POLICY "Users can view their own roles" ON user_roles
+    FOR SELECT USING (user_id = auth.uid()::text);
+
+CREATE POLICY "Admins can manage all user roles" ON user_roles
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = auth.uid()::text
+            AND ur.is_active = true
+            AND r.name IN ('Super Admin', 'School Admin')
         )
     );
 

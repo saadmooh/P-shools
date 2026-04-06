@@ -1,15 +1,121 @@
 -- EMS: Sample Data Seeding Script
 -- This script inserts realistic sample data for testing the Education Management System
 
--- 1. Insert sample users (mix of admin, teachers, guardians, independents)
-INSERT INTO users (id, phone, email, role, is_active, full_name, telegram_id) VALUES
-('admin_001', '+966501234567', 'admin@school.com', 'admin', true, 'Ahmed Al-Admin', 123456789),
-('teacher_001', '+966507654321', 'teacher1@school.com', 'teacher', true, 'Sarah Johnson', 987654321),
-('teacher_002', '+966509876543', 'teacher2@school.com', 'teacher', true, 'Mohammed Al-Rashid', 456789123),
-('guardian_001', '+966501111111', 'parent1@email.com', 'guardian', true, 'Fatima Al-Zahra', 111111111),
-('guardian_002', '+966502222222', 'parent2@email.com', 'guardian', true, 'Omar Al-Saud', 222222222),
-('independent_001', '+966503333333', 'student@email.com', 'independent', true, 'Layla Al-Mansoori', 333333333),
-('independent_002', '+966504444444', 'learner@email.com', 'independent', true, 'Khalid Al-Farsi', 444444444);
+-- 1. Insert sample users (role will be assigned via user_roles table)
+INSERT INTO users (id, phone, email, is_active, full_name, telegram_id) VALUES
+('admin_001', '+966501234567', 'admin@school.com', true, 'Ahmed Al-Admin', 123456789),
+('teacher_001', '+966507654321', 'teacher1@school.com', true, 'Sarah Johnson', 987654321),
+('teacher_002', '+966509876543', 'teacher2@school.com', true, 'Mohammed Al-Rashid', 456789123),
+('guardian_001', '+966501111111', 'parent1@email.com', true, 'Fatima Al-Zahra', 111111111),
+('guardian_002', '+966502222222', 'parent2@email.com', true, 'Omar Al-Saud', 222222222),
+('independent_001', '+966503333333', 'student@email.com', true, 'Layla Al-Mansoori', 333333333),
+('independent_002', '+966504444444', 'learner@email.com', true, 'Khalid Al-Farsi', 444444444);
+
+-- 1.5. Insert default permissions (if not already inserted)
+INSERT INTO permissions (name, description, resource, action) VALUES
+('users.create', 'Create new users', 'users', 'create'),
+('users.read', 'View user information', 'users', 'read'),
+('users.update', 'Update user information', 'users', 'update'),
+('users.delete', 'Delete users', 'users', 'delete'),
+('users.manage', 'Full user management', 'users', 'manage'),
+('students.create', 'Enroll new students', 'students', 'create'),
+('students.read', 'View student information', 'students', 'read'),
+('students.update', 'Update student information', 'students', 'update'),
+('students.delete', 'Remove students', 'students', 'delete'),
+('students.manage', 'Full student management', 'students', 'manage'),
+('subjects.create', 'Create new subjects', 'subjects', 'create'),
+('subjects.read', 'View subjects', 'subjects', 'read'),
+('subjects.update', 'Update subjects', 'subjects', 'update'),
+('subjects.delete', 'Delete subjects', 'subjects', 'delete'),
+('subjects.manage', 'Full subject management', 'subjects', 'manage'),
+('groups.create', 'Create new groups', 'groups', 'create'),
+('groups.read', 'View groups', 'groups', 'read'),
+('groups.update', 'Update groups', 'groups', 'update'),
+('groups.delete', 'Delete groups', 'groups', 'delete'),
+('groups.manage', 'Full group management', 'groups', 'manage'),
+('courses.create', 'Create new courses', 'courses', 'create'),
+('courses.read', 'View courses', 'courses', 'read'),
+('courses.update', 'Update courses', 'courses', 'update'),
+('courses.delete', 'Delete courses', 'courses', 'delete'),
+('courses.manage', 'Full course management', 'courses', 'manage'),
+('sessions.create', 'Schedule new sessions', 'sessions', 'create'),
+('sessions.read', 'View sessions', 'sessions', 'read'),
+('sessions.update', 'Update session details', 'sessions', 'update'),
+('sessions.delete', 'Cancel sessions', 'sessions', 'delete'),
+('sessions.manage', 'Full session management', 'sessions', 'manage'),
+('attendance.mark', 'Mark attendance for sessions', 'attendance', 'update'),
+('attendance.read', 'View attendance records', 'attendance', 'read'),
+('attendance.manage', 'Full attendance management', 'attendance', 'manage'),
+('invoices.create', 'Create invoices', 'invoices', 'create'),
+('invoices.read', 'View invoices', 'invoices', 'read'),
+('invoices.update', 'Update invoices', 'invoices', 'update'),
+('invoices.delete', 'Delete invoices', 'invoices', 'delete'),
+('invoices.manage', 'Full invoice management', 'invoices', 'manage'),
+('system.settings', 'Modify system settings', 'system', 'update'),
+('system.manage', 'Full system administration', 'system', 'manage')
+ON CONFLICT (name) DO NOTHING;
+
+-- 1.6. Insert default roles (if not already inserted)
+INSERT INTO roles (name, description, is_system_role) VALUES
+('Super Admin', 'Full system access with all permissions', true),
+('School Admin', 'Administrative access to manage school operations', true),
+('Teacher', 'Teaching staff with access to their classes and students', true),
+('Guardian', 'Parent access to view their children''s information', true),
+('Independent Learner', 'Self-directed learners with access to their courses', true)
+ON CONFLICT (name) DO NOTHING;
+
+-- 1.7. Assign permissions to default roles
+-- Super Admin gets all permissions
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r, permissions p
+WHERE r.name = 'Super Admin'
+AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
+
+-- School Admin permissions
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r, permissions p
+WHERE r.name = 'School Admin'
+AND p.name IN ('users.manage', 'students.manage', 'subjects.manage', 'groups.manage', 'courses.manage', 'sessions.manage', 'attendance.manage', 'invoices.manage', 'system.settings')
+AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
+
+-- Teacher permissions
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r, permissions p
+WHERE r.name = 'Teacher'
+AND p.name IN ('students.read', 'groups.read', 'courses.read', 'sessions.read', 'sessions.update', 'attendance.mark', 'attendance.read')
+AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
+
+-- Guardian permissions
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r, permissions p
+WHERE r.name = 'Guardian'
+AND p.name IN ('students.read', 'invoices.read')
+AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
+
+-- Independent Learner permissions
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r, permissions p
+WHERE r.name = 'Independent Learner'
+AND p.name IN ('courses.read', 'sessions.read', 'attendance.read')
+AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.id AND rp.permission_id = p.id);
+
+-- 1.8. Assign roles to users
+INSERT INTO user_roles (user_id, role_id, assigned_by)
+SELECT u.id, r.id, u.id
+FROM users u, roles r
+WHERE (u.id = 'admin_001' AND r.name = 'Super Admin')
+   OR (u.id = 'teacher_001' AND r.name = 'Teacher')
+   OR (u.id = 'teacher_002' AND r.name = 'Teacher')
+   OR (u.id = 'guardian_001' AND r.name = 'Guardian')
+   OR (u.id = 'guardian_002' AND r.name = 'Guardian')
+   OR (u.id = 'independent_001' AND r.name = 'Independent Learner')
+   OR (u.id = 'independent_002' AND r.name = 'Independent Learner')
+ON CONFLICT (user_id, role_id) DO NOTHING;
 
 -- 2. Insert guardian details
 INSERT INTO guardians (user_id, full_name, national_id, address, balance, notes) VALUES
