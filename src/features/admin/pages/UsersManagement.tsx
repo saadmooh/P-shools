@@ -251,7 +251,7 @@ const UsersManagement: React.FC = () => {
                         <option key={role.id} value={role.id}>{role.name}</option>
                       ))}
                     </select>
-                    <Button variant="ghost" size="sm" className="p-2" onClick={() =u003e handleEdit(user)}>
+                    <Button variant="ghost" size="sm" className="p-2" onClick={() => handleEdit(user)}>
                       <Edit size={16} />
                     </Button>
                     <Button variant="ghost" size="sm" className="p-2 text-red-500" onClick={() =u003e {

@@ -1,52 +1,30 @@
-name: Deploy to GitHub Pages
+name: CI
 
 on:
   push:
-    branches: [main]
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+    branches: [ main ]
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v3
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: '20.x'
           cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-        env:
-          VITE_SUPABASE_URL: https://lhyawxtxyohbnvsivucc.supabase.co
-          VITE_SUPABASE_ANON_KEY: sb_publishable_Q2Ki9uxQa9Jm79qxMnIrqA_K9e2ueTP
-
+      - run: npm ci
+      - run: npm run build --if-present
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-artifact@v3
         with:
+          name: build
           path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0.2.0
+        with:
+          repoToken: ${'$'{process.env.GITHUB_TOKEN}}
+          firebaseServiceAccount: ${'$'{process.env.FIREBASE_SERVICE_ACCOUNT}}
+          target: stable
+          projectId: customer-loyalty-app
