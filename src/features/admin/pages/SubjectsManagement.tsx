@@ -14,7 +14,9 @@ const SubjectsManagement: React.FC = () => {
   const { hapticFeedback } = useTelegram();
   const queryClient = useQueryClient();
   const [isAddingLevel, setIsAddingLevel] = useState(false);
+  const [isAddingSubject, setIsAddingSubject] = useState<string | null>(null);
   const [newLevel, setNewLevel] = useState({ name: '', sort_order: 0 });
+  const [newSubject, setNewSubject] = useState({ name: '', code: '', default_price_per_hour: 0, level_id: '' });
 
   const { data: levels } = useQuery({ queryKey: ['levels'], queryFn: levelsService.getAll });
   const { data: subjects, isLoading } = useQuery({ queryKey: ['subjects'], queryFn: subjectsService.getAll });
@@ -25,6 +27,16 @@ const SubjectsManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['levels'] });
       setIsAddingLevel(false);
       setNewLevel({ name: '', sort_order: 0 });
+      hapticFeedback('light');
+    }
+  });
+
+  const createSubjectMutation = useMutation({
+    mutationFn: subjectsService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
+      setIsAddingSubject(null);
+      setNewSubject({ name: '', code: '', default_price_per_hour: 0, level_id: '' });
       hapticFeedback('light');
     }
   });
@@ -44,14 +56,44 @@ const SubjectsManagement: React.FC = () => {
         <Card className="mb-6 border-2 border-[var(--tg-theme-button-color)]">
           <CardContent className="p-4 space-y-3">
             <h3 className="font-bold">New Grade Level</h3>
-            <Input 
-              label="Level Name" 
+            <Input
+              label="Level Name"
               placeholder="e.g. Elementary, High School"
               value={newLevel.name}
               onChange={(e) => setNewLevel({...newLevel, name: e.target.value})}
             />
             <Button size="sm" className="w-full" onClick={() => createLevelMutation.mutate(newLevel)}>
               Save Level
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {isAddingSubject && (
+        <Card className="mb-6 border-2 border-[var(--tg-theme-button-color)]">
+          <CardContent className="p-4 space-y-3">
+            <h3 className="font-bold">New Subject</h3>
+            <Input
+              label="Subject Name"
+              placeholder="e.g. Mathematics, English"
+              value={newSubject.name}
+              onChange={(e) => setNewSubject({...newSubject, name: e.target.value})}
+            />
+            <Input
+              label="Subject Code"
+              placeholder="e.g. MATH, ENG"
+              value={newSubject.code}
+              onChange={(e) => setNewSubject({...newSubject, code: e.target.value.toUpperCase()})}
+            />
+            <Input
+              label="Default Price per Hour"
+              type="number"
+              placeholder="50.00"
+              value={newSubject.default_price_per_hour || ''}
+              onChange={(e) => setNewSubject({...newSubject, default_price_per_hour: parseFloat(e.target.value) || 0})}
+            />
+            <Button size="sm" className="w-full" onClick={() => createSubjectMutation.mutate({...newSubject, level_id: isAddingSubject})}>
+              Save Subject
             </Button>
           </CardContent>
         </Card>
@@ -85,7 +127,15 @@ const SubjectsManagement: React.FC = () => {
                   </CardContent>
                 </Card>
               ))}
-              <Button variant="ghost" size="sm" className="border-dashed border-2 border-[var(--tg-theme-secondary-bg-color)] h-12">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="border-dashed border-2 border-[var(--tg-theme-secondary-bg-color)] h-12"
+                onClick={() => {
+                  setIsAddingSubject(level.id);
+                  setNewSubject({...newSubject, level_id: level.id});
+                }}
+              >
                 <Plus size={16} className="mr-1" /> Add Subject to {level.name}
               </Button>
             </div>
