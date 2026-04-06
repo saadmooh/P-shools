@@ -16,7 +16,7 @@ export default function Home() {
   const [scanning, setScanning] = useState(false)
 
   const { data: offersWithProducts, isLoading: isOffersLoading } = useQuery({
-    queryKey: ['discounted-products-home', store?.id],
+    queryKey: ['discounted-products-home', store?.id, user?.id],
     queryFn: async () => {
       if (!store?.id) return [];
       const { data, error } = await supabase
@@ -68,6 +68,17 @@ export default function Home() {
           seen.add(p.id);
         }
       }
+
+      // Simple pseudo-random shuffle based on user ID for personalization
+      if (user?.id) {
+        const seed = user.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        uniqueProducts.sort((a, b) => {
+          const valA = (a.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + seed) % 100;
+          const valB = (b.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + seed) % 100;
+          return valA - valB;
+        });
+      }
+
       return uniqueProducts.slice(0, 6); // Just top 6 for home
     },
     enabled: !!store?.id
@@ -81,7 +92,9 @@ export default function Home() {
     }, 500)
   }
 
-  const latestProducts = products?.slice(0, 6) || []
+  // Filter out products that are already in the "For You" section
+  const forYouIds = new Set(offersWithProducts?.map(p => p.id) || []);
+  const latestProducts = products?.filter(p => !forYouIds.has(p.id)).slice(0, 6) || []
 
   return (
     <div className="min-h-screen bg-white pb-24">
