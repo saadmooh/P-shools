@@ -1,8 +1,9 @@
 // Build fix for useTelegramAuth hook
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTelegramAuth } from '../../hooks/useTelegramAuth';
 import BottomNav from './BottomNav';
+import { fetchSetting } from '../../lib/settings'; // Import the settings fetching function
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,23 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, title }) => {
   const { t } = useTranslation();
   const { isLoading, error, isAuthenticated } = useTelegramAuth();
+  
+  const [appName, setAppName] = useState<string | null>(null);
+  const [defaultPageTitle, setDefaultPageTitle] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      const fetchedAppName = await fetchSetting('app_name');
+      if (fetchedAppName) {
+        setAppName(fetchedAppName);
+      }
+      const fetchedDefaultTitle = await fetchSetting('default_title');
+      if (fetchedDefaultTitle) {
+        setDefaultPageTitle(fetchedDefaultTitle);
+      }
+    };
+    loadSettings();
+  }, []);
 
   if (isLoading) {
     return (
@@ -42,8 +60,8 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     <div className="flex flex-col min-h-screen bg-zinc-50">
       <header className="sticky top-0 z-50 px-5 py-4 bg-white border-b border-zinc-100 flex items-center justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">EMS</p>
-          <h1 className="text-lg font-semibold text-zinc-900">{title || t('common.welcome')}</h1>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{appName || 'EMS'}</p>
+          <h1 className="text-lg font-semibold text-zinc-900">{title || defaultPageTitle || t('common.welcome')}</h1>
         </div>
         <div className="w-9 h-9 rounded-full bg-zinc-900 flex items-center justify-center text-white font-medium text-sm">
           {isAuthenticated ? '✓' : '?'}

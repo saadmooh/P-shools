@@ -1,7 +1,13 @@
 -- EMS: Complete Database Reset and Recreation
--- WARNING: This will DROP ALL DATA and recreate the entire schema from scratch
+-- تحذير: سيقوم هذا السكربت بحذف جميع البيانات والجداول السابقة قبل إعادة إنشاء الهيكل من الصفر
+-- ملاحظة: لا يحتوي هذا الملف على بيانات أولية (Seeding) كما طُلب
 
--- 1. Drop all tables in reverse dependency order (to avoid FK constraints)
+-- 0. إعدادات أمان ضرورية للمهاجرة (تمنع أخطاء التحقق المسبق للدوال)
+SET check_function_bodies = false;
+
+-- ============================================================================
+-- 1. حذف جميع الجداول بترتيب عكسي لتجنب أخطاء القيود المرجعية (Foreign Keys)
+-- ============================================================================
 DROP TABLE IF EXISTS absence_justifications CASCADE;
 DROP TABLE IF EXISTS course_participants CASCADE;
 DROP TABLE IF EXISTS group_enrollments CASCADE;
@@ -19,7 +25,9 @@ DROP TABLE IF EXISTS invoices CASCADE;
 DROP TABLE IF EXISTS system_settings CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
--- 2. Drop all custom types
+-- ============================================================================
+-- 2. حذف جميع الأنواع المخصصة (Enums)
+-- ============================================================================
 DROP TYPE IF EXISTS user_role CASCADE;
 DROP TYPE IF EXISTS contract_type CASCADE;
 DROP TYPE IF EXISTS session_type CASCADE;
@@ -35,12 +43,10 @@ DROP TYPE IF EXISTS relation_type CASCADE;
 DROP TYPE IF EXISTS participant_type CASCADE;
 
 -- ============================================================================
--- RECREATE SCHEMA FROM MIGRATIONS
+-- 3. إعادة إنشاء الهيكل (SCHEMA) من الصفر
 -- ============================================================================
 
--- EMS: Education Management System - Initial Schema
-
--- 1. ENUMS
+-- 3.1 Enums
 CREATE TYPE user_role AS ENUM ('admin', 'teacher', 'guardian', 'independent', 'system');
 CREATE TYPE contract_type AS ENUM ('permanent', 'contract', 'hourly');
 CREATE TYPE session_type AS ENUM ('group', 'course');
@@ -55,16 +61,19 @@ CREATE TYPE payroll_status AS ENUM ('draft', 'approved', 'paid');
 CREATE TYPE relation_type AS ENUM ('father', 'mother', 'tutor', 'other');
 CREATE TYPE participant_type AS ENUM ('student', 'independent');
 
--- 2. CORE TABLES
+-- 3.2 الجداول الأساسية (CORE TABLES)
 CREATE TABLE users (
     id TEXT PRIMARY KEY, -- Telegram User ID
     phone VARCHAR(20) UNIQUE,
     email VARCHAR(150) UNIQUE,
-    role user_role NOT NULL DEFAULT 'guardian',
+    telegram_id BIGINT UNIQUE,
+    role user_role NOT NULL,
     is_active BOOLEAN DEFAULT true,
     full_name VARCHAR(200),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+COMMENT ON COLUMN users.telegram_id IS 'Telegram user ID for authentication';
 
 CREATE TABLE guardians (
     user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -95,7 +104,7 @@ CREATE TABLE students (
     is_active BOOLEAN DEFAULT true
 );
 
--- 3. INFRASTRUCTURE
+-- 3.3 البنية التحتية (INFRASTRUCTURE)
 CREATE TABLE rooms (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
@@ -122,7 +131,7 @@ CREATE TABLE subjects (
     default_price_per_hour DECIMAL(10,2) NOT NULL
 );
 
--- 4. ACADEMIC
+-- 3.4 الأكاديمي (ACADEMIC)
 CREATE TABLE groups (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     subject_id UUID REFERENCES subjects(id),
@@ -154,7 +163,7 @@ CREATE TABLE courses (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. SESSIONS
+-- 3.5 الجلسات (SESSIONS)
 CREATE TABLE sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_type session_type NOT NULL,
@@ -176,7 +185,7 @@ CREATE TABLE sessions (
     )
 );
 
--- 6. ATTENDANCE
+-- 3.6 الحضور والغياب (ATTENDANCE)
 CREATE TABLE attendances (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
@@ -193,7 +202,7 @@ CREATE TABLE attendances (
     UNIQUE(session_id, independent_user_id)
 );
 
--- 7. FINANCIALS (Simplified for now)
+-- 3.7 الماليات (FINANCIALS)
 CREATE TABLE invoices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     payer_type participant_type NOT NULL,
@@ -206,7 +215,7 @@ CREATE TABLE invoices (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 8. SYSTEM
+-- 3.8 إعدادات النظام (SYSTEM)
 CREATE TABLE system_settings (
     key VARCHAR(100) PRIMARY KEY,
     value TEXT NOT NULL,
@@ -214,21 +223,13 @@ CREATE TABLE system_settings (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Add telegram_id column to users table for Telegram integration
-ALTER TABLE users ADD COLUMN telegram_id BIGINT UNIQUE;
-
--- Add comment to the column
-COMMENT ON COLUMN users.telegram_id IS 'Telegram user ID for authentication';
-
--- EMS: Add missing enrollment tables for courses and groups
-
--- 1. Course participants table (for independent users enrolling in courses)
+-- 3.9 جداول التسجيل والمبررات (ENROLLMENTS & JUSTIFICATIONS)
 CREATE TABLE course_participants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
     enrollment_date TIMESTAMPTZ DEFAULT NOW(),
-    progress DECIMAL(5,2) DEFAULT 0, -- 0-100 percentage
+    progress DECIMAL(5,2) DEFAULT 0,
     status enrollment_status DEFAULT 'active',
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -236,7 +237,6 @@ CREATE TABLE course_participants (
     UNIQUE(user_id, course_id)
 );
 
--- 2. Group enrollments table (for students in groups)
 CREATE TABLE group_enrollments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
@@ -249,7 +249,6 @@ CREATE TABLE group_enrollments (
     UNIQUE(student_id, group_id)
 );
 
--- 3. Absence justifications table
 CREATE TABLE absence_justifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     attendance_id UUID NOT NULL REFERENCES attendances(id) ON DELETE CASCADE,
@@ -264,16 +263,7 @@ CREATE TABLE absence_justifications (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Add indexes for better performance
-CREATE INDEX idx_course_participants_user_id ON course_participants(user_id);
-CREATE INDEX idx_course_participants_course_id ON course_participants(course_id);
-CREATE INDEX idx_group_enrollments_student_id ON group_enrollments(student_id);
-CREATE INDEX idx_group_enrollments_group_id ON group_enrollments(group_id);
-CREATE INDEX idx_absence_justifications_attendance_id ON absence_justifications(attendance_id);
-
--- EMS: Dynamic Roles and Permissions System
-
--- 1. Create permissions table
+-- 3.10 نظام الصلاحيات والأدوار الديناميكي (ROLES & PERMISSIONS)
 CREATE TABLE permissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL UNIQUE,
@@ -283,7 +273,6 @@ CREATE TABLE permissions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Create roles table
 CREATE TABLE roles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL UNIQUE,
@@ -293,7 +282,6 @@ CREATE TABLE roles (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Create role_permissions junction table
 CREATE TABLE role_permissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
@@ -302,7 +290,6 @@ CREATE TABLE role_permissions (
     UNIQUE(role_id, permission_id)
 );
 
--- 4. Create user_roles table
 CREATE TABLE user_roles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -314,194 +301,100 @@ CREATE TABLE user_roles (
     UNIQUE(user_id, role_id)
 );
 
--- 5. Add indexes for dynamic roles system
+-- ============================================================================
+-- 4. الفهارس (INDEXES) للأداء
+-- ============================================================================
+CREATE INDEX idx_course_participants_user_id ON course_participants(user_id);
+CREATE INDEX idx_course_participants_course_id ON course_participants(course_id);
+CREATE INDEX idx_group_enrollments_student_id ON group_enrollments(student_id);
+CREATE INDEX idx_group_enrollments_group_id ON group_enrollments(group_id);
+CREATE INDEX idx_absence_justifications_attendance_id ON absence_justifications(attendance_id);
 CREATE INDEX idx_permissions_resource_action ON permissions(resource, action);
 CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
 CREATE INDEX idx_user_roles_role_id ON user_roles(role_id);
 CREATE INDEX idx_role_permissions_role_id ON role_permissions(role_id);
 CREATE INDEX idx_role_permissions_permission_id ON role_permissions(permission_id);
 
--- EMS: Education Management System - RLS Policies
+-- ============================================================================
+-- 5. سياسات أمان مستوى الصف (Row Level Security - RLS)
+-- ============================================================================
 
--- 1. Enable RLS on the users table (if not already enabled)
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-
--- 2. Allow public/authenticated inserts for initial user registration
--- We use a permissive policy here because users are identified by their Telegram ID
--- and not necessarily by a Supabase Auth session during the initial registration.
-CREATE POLICY "Allow insert for new users" ON users
-  FOR INSERT
-  WITH CHECK (true);
-
--- 3. Allow users to read their own data
-CREATE POLICY "Users can read own data" ON users
-  FOR SELECT
-  USING (true); -- Simplified for now, can be restricted to auth.uid() later
-
--- EMS: Education Management System - Global RLS Policies
--- Enabling CRUD operations for all core tables.
-
--- List of tables to apply policies to
--- users, guardians, teachers, students, rooms, school_levels, subjects, groups, courses, sessions, attendances, invoices, system_settings
-
+-- تمكين RLS على جميع الجداول الأساسية
 DO $$
 DECLARE
-    table_name TEXT;
+    tbl TEXT;
 BEGIN
-    FOR table_name IN
+    FOR tbl IN
         SELECT tablename
         FROM pg_tables
         WHERE schemaname = 'public'
         AND tablename IN ('users', 'guardians', 'teachers', 'students', 'rooms', 'school_levels', 'subjects', 'groups', 'courses', 'sessions', 'attendances', 'invoices', 'system_settings', 'course_participants', 'group_enrollments', 'absence_justifications', 'permissions', 'roles', 'role_permissions', 'user_roles')
     LOOP
-        -- Enable RLS
-        EXECUTE 'ALTER TABLE IF EXISTS ' || table_name || ' ENABLE ROW LEVEL SECURITY';
-
-        -- Drop existing policies if any to avoid errors on rerun
-        EXECUTE 'DROP POLICY IF EXISTS "Allow all operations" ON ' || table_name;
-
-        -- Create a permissive policy
-        EXECUTE 'CREATE POLICY "Allow all operations" ON ' || table_name || ' FOR ALL USING (true) WITH CHECK (true)';
+        EXECUTE 'ALTER TABLE IF EXISTS ' || tbl || ' ENABLE ROW LEVEL SECURITY';
+        -- حذف السياسات القديمة إن وجدت لتجنب التكرار عند إعادة التشغيل
+        EXECUTE 'DROP POLICY IF EXISTS "Allow insert for new users" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Users can read own data" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Users can view their own course enrollments" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Users can enroll themselves in courses" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Users can update their own enrollments" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Guardians can view their children''s group enrollments" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Teachers can view enrollments in their groups" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Admins can manage all group enrollments" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Users can view justifications for their attendance" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Users can create justifications for their attendance" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Teachers and admins can review justifications" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Admins can manage permissions" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Admins can manage roles" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Admins can create and update roles" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Admins can manage role permissions" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Users can view their own roles" ON ' || tbl;
+        EXECUTE 'DROP POLICY IF EXISTS "Admins can manage all user roles" ON ' || tbl;
     END LOOP;
 END $$;
 
--- Enable RLS
-ALTER TABLE course_participants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE group_enrollments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE absence_justifications ENABLE ROW LEVEL SECURITY;
+-- سياسات جدول المستخدمين
+CREATE POLICY "Allow insert for new users" ON users FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can read own data" ON users FOR SELECT USING (true); -- يمكن تقييدها لاحقاً بـ auth.uid()
 
--- RLS Policies for course_participants
-CREATE POLICY "Users can view their own course enrollments" ON course_participants
-    FOR SELECT USING (auth.uid()::text = user_id);
+-- سياسات جداول التسجيل والمبررات
+CREATE POLICY "Users can view their own course enrollments" ON course_participants FOR SELECT USING (auth.uid()::text = user_id);
+CREATE POLICY "Users can enroll themselves in courses" ON course_participants FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+CREATE POLICY "Users can update their own enrollments" ON course_participants FOR UPDATE USING (auth.uid()::text = user_id);
 
-CREATE POLICY "Users can enroll themselves in courses" ON course_participants
-    FOR INSERT WITH CHECK (auth.uid()::text = user_id);
-
-CREATE POLICY "Users can update their own enrollments" ON course_participants
-    FOR UPDATE USING (auth.uid()::text = user_id);
-
--- RLS Policies for group_enrollments (admins and teachers can manage)
 CREATE POLICY "Guardians can view their children's group enrollments" ON group_enrollments
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM students s
-            WHERE s.id = group_enrollments.student_id
-            AND s.guardian_id = auth.uid()::text
-        )
-    );
+    FOR SELECT USING (EXISTS (SELECT 1 FROM students s WHERE s.id = group_enrollments.student_id AND s.guardian_id = auth.uid()::text));
 
 CREATE POLICY "Teachers can view enrollments in their groups" ON group_enrollments
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM groups g
-            WHERE g.id = group_enrollments.group_id
-            AND g.teacher_id = auth.uid()::text
-        )
-    );
+    FOR SELECT USING (EXISTS (SELECT 1 FROM groups g WHERE g.id = group_enrollments.group_id AND g.teacher_id = auth.uid()::text));
 
 CREATE POLICY "Admins can manage all group enrollments" ON group_enrollments
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM users u
-            WHERE u.id = auth.uid()::text
-            AND u.role = 'admin'
-        )
-    );
+    FOR ALL USING (EXISTS (SELECT 1 FROM users u WHERE u.id = auth.uid()::text AND u.role = 'admin'));
 
--- RLS Policies for absence_justifications
 CREATE POLICY "Users can view justifications for their attendance" ON absence_justifications
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM attendances a
-            WHERE a.id = absence_justifications.attendance_id
-            AND (
-                a.student_id IN (
-                    SELECT s.id FROM students s WHERE s.guardian_id = auth.uid()::text
-                ) OR
-                a.independent_user_id = auth.uid()::text
-            )
-        )
-    );
+    FOR SELECT USING (EXISTS (
+        SELECT 1 FROM attendances a WHERE a.id = absence_justifications.attendance_id
+        AND (a.student_id IN (SELECT s.id FROM students s WHERE s.guardian_id = auth.uid()::text) OR a.independent_user_id = auth.uid()::text)
+    ));
 
 CREATE POLICY "Users can create justifications for their attendance" ON absence_justifications
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM attendances a
-            WHERE a.id = absence_justifications.attendance_id
-            AND (
-                a.student_id IN (
-                    SELECT s.id FROM students s WHERE s.guardian_id = auth.uid()::text
-                ) OR
-                a.independent_user_id = auth.uid()::text
-            )
-        )
-    );
+    FOR INSERT WITH CHECK (EXISTS (
+        SELECT 1 FROM attendances a WHERE a.id = absence_justifications.attendance_id
+        AND (a.student_id IN (SELECT s.id FROM students s WHERE s.guardian_id = auth.uid()::text) OR a.independent_user_id = auth.uid()::text)
+    ));
 
 CREATE POLICY "Teachers and admins can review justifications" ON absence_justifications
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM users u
-            WHERE u.id = auth.uid()::text
-            AND u.role IN ('admin', 'teacher')
-        )
-    );
+    FOR UPDATE USING (EXISTS (SELECT 1 FROM users u WHERE u.id = auth.uid()::text AND u.role IN ('admin', 'teacher')));
 
--- RLS Policies for dynamic roles system
--- Permissions table - only admins can manage
-CREATE POLICY "Admins can manage permissions" ON permissions
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM user_roles ur
-            JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = auth.uid()::text
-            AND ur.is_active = true
-            AND r.name IN ('Super Admin', 'School Admin')
-        )
-    );
+-- سياسات نظام الصلاحيات والأدوار
+CREATE POLICY "Admins can manage permissions" ON permissions FOR ALL USING (EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = auth.uid()::text AND ur.is_active = true AND r.name IN ('Super Admin', 'School Admin')));
 
--- Roles table - admins can manage non-system roles
-CREATE POLICY "Admins can manage roles" ON roles
-    FOR SELECT USING (true);
+CREATE POLICY "Admins can view roles" ON roles FOR SELECT USING (true);
+CREATE POLICY "Admins can manage non-system roles" ON roles FOR ALL USING (
+    EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = auth.uid()::text AND ur.is_active = true AND r.name IN ('Super Admin', 'School Admin'))
+    AND (is_system_role = false OR is_system_role IS NULL)
+);
 
-CREATE POLICY "Admins can create and update roles" ON roles
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM user_roles ur
-            JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = auth.uid()::text
-            AND ur.is_active = true
-            AND r.name IN ('Super Admin', 'School Admin')
-        ) AND (is_system_role = false OR is_system_role IS NULL)
-    );
+CREATE POLICY "Admins can manage role permissions" ON role_permissions FOR ALL USING (EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = auth.uid()::text AND ur.is_active = true AND r.name IN ('Super Admin', 'School Admin')));
 
--- Role permissions - admins can manage
-CREATE POLICY "Admins can manage role permissions" ON role_permissions
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM user_roles ur
-            JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = auth.uid()::text
-            AND ur.is_active = true
-            AND r.name IN ('Super Admin', 'School Admin')
-        )
-    );
-
--- User roles - users can view their own, admins can manage all
-CREATE POLICY "Users can view their own roles" ON user_roles
-    FOR SELECT USING (user_id = auth.uid()::text);
-
-CREATE POLICY "Admins can manage all user roles" ON user_roles
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM user_roles ur
-            JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = auth.uid()::text
-            AND ur.is_active = true
-            AND r.name IN ('Super Admin', 'School Admin')
-        )
-    );
-
--- Insert initial system settings
-INSERT INTO system_settings (key, value, description) VALUES
-('justification_deadline_hours', '24', 'Default hours before session to justify absence');</content>
-<parameter name="filePath">/home/user/p-school/supabase/migrations/000_complete_database_reset.sql
+CREATE POLICY "Users can view their own roles" ON user_roles FOR SELECT USING (user_id = auth.uid()::text);
+CREATE POLICY "Admins can manage all user roles" ON user_roles FOR ALL USING (EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = auth.uid()::text AND ur.is_active = true AND r.name IN ('Super Admin', 'School Admin')));
