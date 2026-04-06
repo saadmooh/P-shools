@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, ArrowLeft } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, ShieldX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../shared/Layout';
 import Button from '../../../components/ui/Button';
@@ -8,11 +8,14 @@ import Card, { CardContent } from '../../../components/ui/Card';
 import Input from '../../../components/ui/Input';
 import { roomsService, RoomInsert } from '../../../services/supabase/rooms';
 import { useTelegram } from '../../../hooks/useTelegram';
+import { useAuthPermissions, PERMISSIONS } from '../../../lib/permissions';
 
 const RoomsManagement: React.FC = () => {
   const navigate = useNavigate();
   const { hapticFeedback } = useTelegram();
   const queryClient = useQueryClient();
+  const { hasPermission, isAdmin } = useAuthPermissions();
+  
   const [isAdding, setIsAdding] = useState(false);
   const [editingRoom, setEditingRoom] = useState<any>(null);
   const [newRoom, setNewRoom] = useState<RoomInsert>({
@@ -20,6 +23,34 @@ const RoomsManagement: React.FC = () => {
     code: '',
     capacity: 20,
   });
+  const [canManageRooms, setCanManageRooms] = useState(false);
+
+  useEffect(() => {
+    const checkPermissions = async () => {
+      const hasAccess = await hasPermission(PERMISSIONS.ROOMS_MANAGE) || isAdmin();
+      setCanManageRooms(hasAccess);
+    };
+    checkPermissions();
+  }, [hasPermission, isAdmin]);
+
+  // Show access denied if user doesn't have permission
+  if (!canManageRooms) {
+    return (
+      <Layout title="Access Denied">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+          <ShieldX size={64} className="text-red-500 mb-4" />
+          <h2 className="text-2xl font-bold text-zinc-900 mb-2">Access Denied</h2>
+          <p className="text-zinc-600 mb-6 max-w-md">
+            You don't have permission to manage rooms.
+            Contact your administrator if you need access.
+          </p>
+          <Button onClick={() => navigate('/admin')}>
+            Return to Dashboard
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   const { data: rooms, isLoading } = useQuery({
     queryKey: ['rooms'],
@@ -33,6 +64,10 @@ const RoomsManagement: React.FC = () => {
       setIsAdding(false);
       setNewRoom({ name: '', code: '', capacity: 20 });
       hapticFeedback('light');
+    },
+    onError: (error: any) => {
+      console.error("Failed to create room:", error);
+      alert(`Failed to add room: ${error.message}`);
     }
   });
 
@@ -42,22 +77,37 @@ const RoomsManagement: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
       setEditingRoom(null);
+      setIsAdding(false); // Close the form after update
+      setNewRoom({ name: '', code: '', capacity: 20 });
       hapticFeedback('medium');
+    },
+    onError: (error: any) => {
+      console.error("Failed to update room:", error);
+      alert(`Failed to update room: ${error.message}`);
     }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: roomsService.delete,
+    mutationFn: (id: string) => roomsService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      // No need to close modal here, delete is usually triggered by a button click directly
       hapticFeedback('medium');
+    },
+    onError: (error: any) => {
+      console.error("Failed to delete room:", error);
+      alert(`Failed to delete room: ${error.message}`);
     }
   });
 
   const handleSave = () => {
+    if (!newRoom.name || !newRoom.code) {
+      alert("Room name and code are required.");
+      return;
+    }
     if (editingRoom) {
       updateMutation.mutate({ id: editingRoom.id, data: newRoom });
-    } else if (newRoom.name && newRoom.code) {
+    } else {
       createMutation.mutate(newRoom);
     }
   };
@@ -73,13 +123,21 @@ const RoomsManagement: React.FC = () => {
       has_ac: room.has_ac,
       notes: room.notes
     });
-    setIsAdding(true);
+    setIsAdding(true); // Reuse the adding modal for editing
+  };
+  
+  const startDelete = (room: any) => {
+    // For deletion, we might want a confirmation modal. For now, directly trigger mutation.
+    // In a more complex UI, this would open a confirmation dialog.
+    if (window.confirm(`Are you sure you want to delete room "${room.name}"?`)) {
+      deleteMutation.mutate(room.id);
+    }
   };
 
-  const cancelEdit = () => {
+  const cancelForm = () => {
+    setIsAdding(false);
     setEditingRoom(null);
     setNewRoom({ name: '', code: '', capacity: 20 });
-    setIsAdding(false);
   };
 
   return (
@@ -88,9 +146,11 @@ const RoomsManagement: React.FC = () => {
         <Button variant="ghost" size="sm" onClick={() => navigate('/admin')}>
           <ArrowLeft size={18} className="mr-1" /> Back
         </Button>
-        <Button size="sm" onClick={() => setIsAdding(!isAdding)}>
-          <Plus size={18} className="mr-1" /> Add Room
-        </Button>
+        {canManageRooms && ( // Conditionally render Add button
+          <Button size="sm" onClick={() => setIsAdding(true)}>
+            <Plus size={18} className="mr-1" /> Add Room
+          </Button>
+        )}
       </div>
 
       {isAdding && (
@@ -154,7 +214,7 @@ const RoomsManagement: React.FC = () => {
               >
                 {editingRoom ? 'Update' : 'Save'}
               </Button>
-              <Button size="sm" variant="secondary" className="flex-1" onClick={cancelEdit}>
+              <Button size="sm" variant="secondary" className="flex-1" onClick={cancelForm}>
                 Cancel
               </Button>
             </div>
@@ -176,22 +236,26 @@ const RoomsManagement: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-2"
-                    onClick={() => startEdit(room)}
-                  >
-                    <Pencil size={16} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-2 text-[var(--tg-theme-destructive-text-color)]"
-                    onClick={() => deleteMutation.mutate(room.id)}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
+                  {canManageRooms && ( // Conditionally render Edit/Delete buttons
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-2"
+                        onClick={() => startEdit(room)}
+                      >
+                        <Pencil size={16} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-2 text-[var(--tg-theme-destructive-text-color)]"
+                        onClick={() => startDelete(room)}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>

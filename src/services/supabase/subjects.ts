@@ -24,6 +24,25 @@ export const levelsService = {
       .single();
     if (error) throw error;
     return data;
+  },
+
+  async update(id: string, levelData: Partial<Database['public']['Tables']['school_levels']['Update']>) {
+    const { data, error } = await supabase
+      .from('school_levels')
+      .update(levelData)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('school_levels')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   }
 };
 
@@ -45,5 +64,24 @@ export const subjectsService = {
       .single();
     if (error) throw error;
     return data;
+  },
+
+  async update(id: string, subjectData: Partial<Database['public']['Tables']['subjects']['Update']>) {
+    const { data, error } = await supabase
+      .from('subjects')
+      .update(subjectData)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('subjects')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   }
 };

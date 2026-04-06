@@ -218,5 +218,4 @@ export function usePermissions() {
 async function getCurrentUser() {
   const { data: { user } } = await supabase.auth.getUser();
   return user;
-}</content>
-<parameter name="filePath">/home/user/p-school/src/lib/permissions.ts
+}

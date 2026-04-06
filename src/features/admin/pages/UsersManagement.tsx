@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Shield, User, ArrowLeft, MoreVertical, Plus, Edit, Trash2 } from 'lucide-react';
+import { Shield, User, ArrowLeft, MoreVertical, Plus, Edit, Trash2, PlusSquare, Check, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../shared/Layout';
 import Button from '../../../components/ui/Button';
 import Card, { CardContent } from '../../../components/ui/Card';
+import Input from '../../../components/ui/Input';
+import Select from '../../../components/ui/Select';
 import { supabase } from '../../../lib/supabase';
 import { useTelegram } from '../../../hooks/useTelegram';
 import { useAuthPermissions } from '../../../lib/permissions';
@@ -14,7 +16,18 @@ const UsersManagement: React.FC = () => {
   const { hapticFeedback } = useTelegram();
   const queryClient = useQueryClient();
   const { hasPermission, isAdmin } = useAuthPermissions();
-  const [canManageUsers, setCanManageUsers] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    role_id: ''
+  });
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [deletingUserId, setDeletingUserId] = useState('');
 
   React.useEffect(() => {
     const checkPermissions = async () => {
@@ -54,22 +67,105 @@ const UsersManagement: React.FC = () => {
     enabled: canManageUsers
   });
 
-  const assignRoleMutation = useMutation({
-    mutationFn: async ({ userId, roleId }: { userId: string, roleId: string }) => {
-      // First remove existing roles for this user
+  const handleCreateUser = () => {
+    createUserMutation.mutate(formData);
+  };
+
+  const handleEditUser = () => {
+    updateUserMutation.mutate({
+      ...editingUser,
+      ...formData
+    });
+  };
+
+  const handleDeleteUser = () => {
+    deleteUserMutation.mutate(deletingUserId);
+  };
+
+  const handleEdit = (user: any) => {
+    setShowEditModal(true);
+    setEditingUser(user);
+    setFormData({
+      full_name: user.full_name,
+      email: user.email,
+      phone: user.phone,
+      role_id: user.user_roles?.[0]?.role_id || ''
+    });
+  };
+
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: any) => {
+      const { data, error } = await supabase
+        .from('users')
+        .insert({
+          full_name: userData.full_name,
+          email: userData.email,
+          phone: userData.phone
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Assign role
+      await supabase
+        .from('user_roles')
+        .insert({ user_id: data.id, role_id: userData.role_id });
+      
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users_with_roles'] });
+      setShowCreateModal(false);
+      setFormData({ full_name: '', email: '', phone: '', role_id: '' });
+      hapticFeedback('medium');
+    }
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: async (userData: any) => {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          full_name: userData.full_name,
+          email: userData.email,
+          phone: userData.phone
+        })
+        .eq('id', userData.id);
+      
+      if (error) throw error;
+      
+      // Update role
       await supabase
         .from('user_roles')
         .delete()
-        .eq('user_id', userId);
-
-      // Then assign the new role
-      const { error } = await supabase
+        .eq('user_id', userData.id);
+      
+      await supabase
         .from('user_roles')
-        .insert({ user_id: userId, role_id: roleId });
+        .insert({ user_id: userData.id, role_id: userData.role_id });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users_with_roles'] });
+      setShowEditModal(false);
+      setEditingUser(null);
+      hapticFeedback('medium');
+    }
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+      
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users_with_roles'] });
+      setShowDeleteModal(false);
+      setDeletingUserId('');
       hapticFeedback('medium');
     }
   });
@@ -155,10 +251,25 @@ const UsersManagement: React.FC = () => {
                         <option key={role.id} value={role.id}>{role.name}</option>
                       ))}
                     </select>
-                    <Button variant="ghost" size="sm" className="p-2">
+                    <Button variant="ghost" size="sm" className="p-2" onClick={() =u003e handleEdit(user)}>
                       <Edit size={16} />
                     </Button>
-                    <Button variant="ghost" size="sm" className="p-2 text-red-500">
+                    <Button variant="ghost" size="sm" className="p-2 text-red-500" onClick={() =u003e {
+                      setShowDeleteModal(true);
+                      setDeletingUserId(user.id);
+                    }}>
+                      <Trash2 size={16} />
+                    </Button>
+                      <Trash2 size={16} />
+                    </Button>
+                      <Trash2 size={16} />
+                    </Button>
+                      <Trash2 size={16} />
+                    </Button>
+                      <Trash2 size={16} />
+                    </Button>
+                      <Trash2 size={16} />
+                    </Button>
                       <Trash2 size={16} />
                     </Button>
                   </div>
@@ -172,4 +283,61 @@ const UsersManagement: React.FC = () => {
   );
 };
 
-export default UsersManagement;
+      {/* Edit User Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6" onClick={() =u003e setShowEditModal(false)}u003e
+          <Card className="w-full max-w-md animate-in zoom-in duration-200" onClick={(e) =u003e e.stopPropagation()}u003e
+            <CardContent className="p-6"u003e
+              <h3 className="font-bold text-lg mb-4"u003eEdit Useru003c/h3>
+              <form className="space-y-3"u003e
+                <Input
+                  label="Full Name"
+                  value={formData.full_name}
+                  onChange={(e) =u003e setFormData({...formData, full_name: e.target.value})}u003e
+                </Input>
+                <Input
+                  label="Email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) =u003e setFormData({...formData, email: e.target.value})}u003e
+                </Input>
+                <Input
+                  label="Phone"
+                  value={formData.phone}
+                  onChange={(e) =u003e setFormData({...formData, phone: e.target.value})}u003e
+                </Input>
+                <Select
+                  label="Role"
+                  value={formData.role_id}
+                  onChange={(e) =u003e setFormData({...formData, role_id: e.target.value})}u003e
+                  <option value=""u003eSelect Role</option>
+                  {roles?.map(role =u003e (
+                    <option key={role.id} value={role.id}u003e{role.name}u003c/option>
+                  ))}u003e
+                </Select>
+                <div className="flex gap-2"u003e
+                  <Button onClick={() =u003e setShowEditModal(false)}u003eCancelu003c/Button>
+                  <Button onClick={handleEditUser} disabled={!formData.full_name || !formData.email || !formData.role_id}u003eUpdateu003c/Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}u003e
+
+      {/* Delete User Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6" onClick={() =u003e setShowDeleteModal(false)}u003e
+          <Card className="w-full max-w-xs animate-in zoom-in duration-200" onClick={(e) =u003e e.stopPropagation()}u003e
+            <CardContent className="p-6 text-center"u003e
+              <Shield size={48} className="text-red-500 mb-4" /u003e
+              <h3 className="font-bold text-lg mb-2"u003eDelete Useru003c/h3>
+              <p className="text-sm text-[var(--tg-theme-hint-color)] mb-4"u003eAre you sure you want to delete this user? This action cannot be undone.u003c/p>
+              <div className="flex gap-2"u003e
+                <Button onClick={() =u003e setShowDeleteModal(false)}u003eCancelu003c/Button>
+                <Button variant="destructive" onClick={handleDeleteUser}u003eDeleteu003c/Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}

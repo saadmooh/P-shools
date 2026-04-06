@@ -1,36 +1,73 @@
-import React from 'react';
-import { User, Mail, Phone, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Phone, Users, ShieldX } from 'lucide-react'; // Import ShieldX
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import Layout from '../../shared/Layout';
+import Button from '../../../components/ui/Button'; // Import Button for Access Denied screen
+import { useNavigate } from 'react-router-dom'; // Import useNavigate for redirection
+import { useAuthPermissions } from '../../../lib/permissions'; // Import auth permissions hook
 
 const GuardianProfile: React.FC = () => {
   const { user } = useAuthStore();
+  const { hasPermission, isAdmin } = useAuthPermissions(); // Get permission checking hooks
+  const navigate = useNavigate();
+
+  // Authorization check
+  const [canViewProfile, setCanViewProfile] = React.useState(false);
+  React.useEffect(() => {
+    const checkPermissions = async () => {
+      // Check if user is a guardian or has a specific view permission
+      const hasAccess = user?.role?.toLowerCase() === 'guardian' || await hasPermission('guardian.view');
+      setCanViewProfile(hasAccess);
+    };
+    checkPermissions();
+  }, [user?.role, hasPermission]);
+
+  // Show access denied if user doesn't have permission
+  if (!canViewProfile) {
+    return (
+      <Layout title="Access Denied">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+          <ShieldX size={64} className="text-red-500 mb-4" />
+          <h2 className="text-2xl font-bold text-zinc-900 mb-2">Access Denied</h2>
+          <p className="text-zinc-600 mb-6 max-w-md">
+            You don't have permission to view your profile.
+            Contact your administrator if you need access.
+          </p>
+          <Button onClick={() => navigate('/admin')}>
+            Return to Dashboard
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   const { data: guardian } = useQuery({
-    queryKey: ['guardian', user?.id],
+    queryKey: ['guardian_profile', user?.id], // Ensure queryKey is consistent
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('guardians')
         .select('*')
         .eq('user_id', user?.id)
         .single();
+      if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && canViewProfile, // Only fetch if user exists and has access
   });
 
   const { data: students } = useQuery({
-    queryKey: ['students', user?.id],
+    queryKey: ['guardian_students', user?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('students')
         .select('*')
         .eq('guardian_id', user?.id);
+      if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && canViewProfile, // Only fetch if user exists and has access
   });
 
   return (
@@ -71,7 +108,7 @@ const GuardianProfile: React.FC = () => {
 
           <div className="pt-4 border-t">
             <p className="text-sm text-gray-600">Role</p>
-            <p className="font-medium capitalize">{user?.role}</p>
+            <p className="font-medium capitalize">{user?.role || 'N/A'}</p>
           </div>
         </div>
       </div>

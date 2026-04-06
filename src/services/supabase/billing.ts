@@ -24,7 +24,36 @@ export const invoicesService = {
     return data;
   },
 
-  async updateStatus(id: string, status: string) {
+  async create(invoiceData: Database['public']['Tables']['invoices']['Insert']) {
+    const { data, error } = await supabase
+      .from('invoices')
+      .insert([invoiceData])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, invoiceData: Partial<Database['public']['Tables']['invoices']['Update']>) {
+    const { data, error } = await supabase
+      .from('invoices')
+      .update(invoiceData)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('invoices')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async updateStatus(id: string, status: Invoice['status']) {
     const { data, error } = await supabase
       .from('invoices')
       .update({ status })

@@ -1,24 +1,60 @@
 import React from 'react';
-import { User, Mail, Phone, BookOpen, DollarSign } from 'lucide-react';
+import { User, Mail, Phone, BookOpen, DollarSign, ShieldX } from 'lucide-react'; // Import ShieldX
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import Layout from '../../shared/Layout';
+import Button from '../../../components/ui/Button'; // Import Button for Access Denied screen
+import { useNavigate } from 'react-router-dom'; // Import useNavigate for redirection
+import { useAuthPermissions } from '../../../lib/permissions'; // Import auth permissions hook
 
 const TeacherProfile: React.FC = () => {
   const { user } = useAuthStore();
+  const { hasPermission, isAdmin } = useAuthPermissions(); // Get permission checking hooks
+  const navigate = useNavigate();
+
+  // Authorization check
+  const [canViewProfile, setCanViewProfile] = React.useState(false);
+  React.useEffect(() => {
+    const checkPermissions = async () => {
+      // Check if user is a teacher or has a specific view permission
+      const hasAccess = user?.role?.toLowerCase() === 'teacher' || await hasPermission('teacher.view');
+      setCanViewProfile(hasAccess);
+    };
+    checkPermissions();
+  }, [user?.role, hasPermission]);
+
+  // Show access denied if user doesn't have permission
+  if (!canViewProfile) {
+    return (
+      <Layout title="Access Denied">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+          <ShieldX size={64} className="text-red-500 mb-4" />
+          <h2 className="text-2xl font-bold text-zinc-900 mb-2">Access Denied</h2>
+          <p className="text-zinc-600 mb-6 max-w-md">
+            You don't have permission to view the teacher profile.
+            Contact your administrator if you need access.
+          </p>
+          <Button onClick={() => navigate('/admin')}>
+            Return to Dashboard
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   const { data: teacher } = useQuery({
-    queryKey: ['teacher', user?.id],
+    queryKey: ['teacher_profile', user?.id], // Ensure queryKey is consistent with dashboard
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('teachers')
         .select('*')
         .eq('user_id', user?.id)
         .single();
+      if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && canViewProfile, // Only fetch if user exists and has access
   });
 
   return (
@@ -61,13 +97,13 @@ const TeacherProfile: React.FC = () => {
             <DollarSign className="h-5 w-5 text-gray-400" />
             <div>
               <p className="text-sm text-gray-600">Rate per Hour</p>
-              <p className="font-medium">${teacher?.base_rate_per_hour || 'N/A'}</p>
+              <p className="font-medium">${teacher?.base_rate_per_hour?.toFixed(2) || 'N/A'}</p>
             </div>
           </div>
 
           <div className="pt-4 border-t">
             <p className="text-sm text-gray-600">Role</p>
-            <p className="font-medium capitalize">{user?.role}</p>
+            <p className="font-medium capitalize">{user?.role || 'N/A'}</p>
           </div>
         </div>
       </div>

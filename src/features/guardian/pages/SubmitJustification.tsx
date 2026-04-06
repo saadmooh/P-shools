@@ -1,22 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
-import { ArrowLeft, Upload, Send, Camera } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Upload, Send, Camera, ShieldX } from 'lucide-react'; // Import ShieldX
 import Layout from '../../shared/Layout';
-import Button from '../../../components/ui/Button';
+import Button from '../../../components/ui/Button'; // Import Button for Access Denied screen
 import Card, { CardContent } from '../../../components/ui/Card';
 import Input from '../../../components/ui/Input';
 import { supabase } from '../../../lib/supabase';
 import { useTelegram } from '../../../hooks/useTelegram';
+import { useAuthPermissions } from '../../../lib/permissions'; // Import auth permissions hook
+import { useAuthStore } from '../../../stores/authStore'; // Import useAuthStore to get user info
 
 const SubmitJustification: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { hapticFeedback, showAlert } = useTelegram();
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const { hasPermission, isAdmin } = useAuthPermissions(); // Get permission checking hooks
+  
+  const [searchParams] = useSearchParams();
   const attendanceId = searchParams.get('attendanceId');
   
   const [reason, setReason] = useState('');
   const [uploading, setUploading] = useState(false);
+
+  // Authorization check
+  const [canSubmitJustification, setCanSubmitJustification] = useState(false);
+  useEffect(() => {
+    const checkPermissions = async () => {
+      // Check if user is a guardian or has a specific permission
+      const hasAccess = user?.role?.toLowerCase() === 'guardian' || await hasPermission('guardian.submit_justification');
+      setCanSubmitJustification(hasAccess);
+    };
+    checkPermissions();
+  }, [user?.role, hasPermission]);
+
+  // Show access denied if user doesn't have permission or if attendanceId is missing
+  if (!canSubmitJustification || !attendanceId) {
+    return (
+      <Layout title="Access Denied">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+          <ShieldX size={64} className="text-red-500 mb-4" />
+          <h2 className="text-2xl font-bold text-zinc-900 mb-2">Access Denied</h2>
+          <p className="text-zinc-600 mb-6 max-w-md">
+            { !attendanceId ? "Invalid request: Attendance ID is missing." : "You don't have permission to submit justifications." }
+            Contact your administrator if you need access or if this is an error.
+          </p>
+          <Button onClick={() => navigate('/admin')}>
+            Return to Dashboard
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   const submitMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -32,9 +68,14 @@ const SubmitJustification: React.FC = () => {
         .eq('id', attendanceId);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['guardian_documents'] }); // Invalidate documents if they depend on this
       hapticFeedback('medium');
       showAlert('Justification submitted successfully');
-      navigate('/guardian');
+      navigate('/guardian/documents'); // Navigate to documents page after success
+    },
+    onError: (error: any) => {
+      console.error("Failed to submit justification:", error);
+      alert(`Failed to submit justification: ${error.message}`);
     }
   });
 

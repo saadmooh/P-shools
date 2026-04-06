@@ -4,5 +4,14 @@
       "url": "https://mcp.supabase.com/mcp?project_ref=lhyawxtxyohbnvsivucc",
       "type": "http"
     }
+  },
+  "agents": {
+    "browser": {
+      "confirmSensitiveActions": true
+    }
+  },
+  "security": {
+    "disableAlwaysAllow": false,
+    "enablePermanentToolApproval": true
   }
 }
