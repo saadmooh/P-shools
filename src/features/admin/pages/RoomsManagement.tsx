@@ -14,6 +14,7 @@ const RoomsManagement: React.FC = () => {
   const { hapticFeedback } = useTelegram();
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
+  const [editingRoom, setEditingRoom] = useState<any>(null);
   const [newRoom, setNewRoom] = useState<RoomInsert>({
     name: '',
     code: '',
@@ -35,6 +36,16 @@ const RoomsManagement: React.FC = () => {
     }
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: Partial<RoomInsert> }) =>
+      roomsService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      setEditingRoom(null);
+      hapticFeedback('medium');
+    }
+  });
+
   const deleteMutation = useMutation({
     mutationFn: roomsService.delete,
     onSuccess: () => {
@@ -43,10 +54,32 @@ const RoomsManagement: React.FC = () => {
     }
   });
 
-  const handleCreate = () => {
-    if (newRoom.name && newRoom.code) {
+  const handleSave = () => {
+    if (editingRoom) {
+      updateMutation.mutate({ id: editingRoom.id, data: newRoom });
+    } else if (newRoom.name && newRoom.code) {
       createMutation.mutate(newRoom);
     }
+  };
+
+  const startEdit = (room: any) => {
+    setEditingRoom(room);
+    setNewRoom({
+      name: room.name,
+      code: room.code,
+      capacity: room.capacity,
+      floor: room.floor,
+      has_projector: room.has_projector,
+      has_ac: room.has_ac,
+      notes: room.notes
+    });
+    setIsAdding(true);
+  };
+
+  const cancelEdit = () => {
+    setEditingRoom(null);
+    setNewRoom({ name: '', code: '', capacity: 20 });
+    setIsAdding(false);
   };
 
   return (
@@ -63,30 +96,65 @@ const RoomsManagement: React.FC = () => {
       {isAdding && (
         <Card className="mb-6 border-2 border-[var(--tg-theme-button-color)]">
           <CardContent className="p-4 space-y-3">
-            <h3 className="font-bold">New Room</h3>
-            <Input 
-              label="Room Name" 
+            <h3 className="font-bold">{editingRoom ? 'Edit Room' : 'New Room'}</h3>
+            <Input
+              label="Room Name"
               placeholder="e.g. Science Lab"
-              value={newRoom.name}
+              value={newRoom.name || ''}
               onChange={(e) => setNewRoom({...newRoom, name: e.target.value})}
             />
-            <Input 
-              label="Room Code" 
+            <Input
+              label="Room Code"
               placeholder="e.g. LAB-01"
-              value={newRoom.code}
+              value={newRoom.code || ''}
               onChange={(e) => setNewRoom({...newRoom, code: e.target.value})}
             />
-            <Input 
-              label="Capacity" 
+            <Input
+              label="Capacity"
               type="number"
-              value={newRoom.capacity}
+              value={newRoom.capacity || 20}
               onChange={(e) => setNewRoom({...newRoom, capacity: parseInt(e.target.value)})}
             />
+            <Input
+              label="Floor"
+              placeholder="e.g. Ground Floor"
+              value={newRoom.floor || ''}
+              onChange={(e) => setNewRoom({...newRoom, floor: e.target.value})}
+            />
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={newRoom.has_projector || false}
+                  onChange={(e) => setNewRoom({...newRoom, has_projector: e.target.checked})}
+                />
+                <span className="text-sm">Projector</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={newRoom.has_ac || false}
+                  onChange={(e) => setNewRoom({...newRoom, has_ac: e.target.checked})}
+                />
+                <span className="text-sm">Air Conditioning</span>
+              </label>
+            </div>
+            <Input
+              label="Notes"
+              placeholder="Additional notes..."
+              value={newRoom.notes || ''}
+              onChange={(e) => setNewRoom({...newRoom, notes: e.target.value})}
+            />
             <div className="flex gap-2 pt-2">
-              <Button size="sm" className="flex-1" onClick={handleCreate} loading={createMutation.isPending}>
-                Save
+              <Button
+                size="sm"
+                className="flex-1"
+                onClick={handleSave}
+                loading={createMutation.isPending || updateMutation.isPending}
+              >
+                {editingRoom ? 'Update' : 'Save'}
               </Button>
-              <Button size="sm" variant="secondary" className="flex-1" onClick={() => setIsAdding(false)}>
+              <Button size="sm" variant="secondary" className="flex-1" onClick={cancelEdit}>
                 Cancel
               </Button>
             </div>
@@ -108,12 +176,17 @@ const RoomsManagement: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-2"
+                    onClick={() => startEdit(room)}
+                  >
                     <Pencil size={16} />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="p-2 text-[var(--tg-theme-destructive-text-color)]"
                     onClick={() => deleteMutation.mutate(room.id)}
                   >
