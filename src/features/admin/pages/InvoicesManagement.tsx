@@ -97,17 +97,29 @@ const InvoicesManagement: React.FC = () => {
     }
   });
 
-  // Mock data for guardians and users for selection in the form (replace with actual fetches)
-  // In a real app, you'd fetch these from your Supabase tables.
-  const mockGuardians = [{ id: 'g1', full_name: 'Alice Smith' }, { id: 'g2', full_name: 'Bob Johnson' }];
-  const mockIndependentUsers = [{ id: 'u1', full_name: 'Charlie Brown' }, { id: 'u2', full_name: 'Diana Prince' }];
+  const { data: guardians } = useQuery({
+    queryKey: ['guardians'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('guardians').select('id, full_name').order('full_name');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: independentUsers } = useQuery({
+    queryKey: ['independent-users'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('users').select('id, full_name').order('full_name');
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const handleSaveInvoice = () => {
     if (!invoiceFormData.invoice_number || !invoiceFormData.total_amount || !invoiceFormData.due_date) {
       alert("Invoice number, total amount, and due date are required.");
       return;
     }
-    // Basic validation, more can be added
     const payerId = invoiceFormData.payer_type === 'guardian' ? invoiceFormData.guardian_id : invoiceFormData.independent_user_id;
     if (!payerId) {
       alert("Please select a payer.");
@@ -117,8 +129,7 @@ const InvoicesManagement: React.FC = () => {
     const invoiceData = {
       ...invoiceFormData,
       [invoiceFormData.payer_type === 'guardian' ? 'guardian_id' : 'independent_user_id']: payerId,
-      total_amount: parseFloat(invoiceFormData.total_amount as any), // Ensure it's a number
-      // Add other fields as needed, e.g., for invoice items
+      total_amount: parseFloat(invoiceFormData.total_amount as any),
     };
 
     createInvoiceMutation.mutate(invoiceData);
@@ -260,7 +271,7 @@ const InvoicesManagement: React.FC = () => {
                     onChange={(e) => setInvoiceFormData({...invoiceFormData, guardian_id: e.target.value})}
                   >
                     <option value="">Select Guardian</option>
-                    {mockGuardians.map(g => <option key={g.id} value={g.id}>{g.full_name}</option>)}
+                    {guardians?.map(g => <option key={g.id} value={g.id}>{g.full_name}</option>)}
                   </Select>
                 ) : (
                   <Select
@@ -269,7 +280,7 @@ const InvoicesManagement: React.FC = () => {
                     onChange={(e) => setInvoiceFormData({...invoiceFormData, independent_user_id: e.target.value})}
                   >
                     <option value="">Select User</option>
-                    {mockIndependentUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                    {independentUsers?.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
                   </Select>
                 )}
 
