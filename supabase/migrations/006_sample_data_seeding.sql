@@ -100,8 +100,8 @@ INSERT INTO absence_justifications (attendance_id, reason, attachment_url, statu
 
 -- 15. Insert sample invoices
 INSERT INTO invoices (payer_type, guardian_id, independent_user_id, invoice_number, total_amount, status, due_date) VALUES
-('guardian', 'guardian_001', NULL, 'INV-2024-001', 500.00, 'paid', '2024-10-15'),
-('guardian', 'guardian_002', NULL, 'INV-2024-002', 750.00, 'sent', '2024-11-01'),
+('student', 'guardian_001', NULL, 'INV-2024-001', 500.00, 'paid', '2024-10-15'),
+('student', 'guardian_002', NULL, 'INV-2024-002', 750.00, 'sent', '2024-11-01'),
 ('independent', NULL, 'independent_001', 'INV-2024-003', 320.00, 'paid', '2024-10-20'),
 ('independent', NULL, 'independent_002', 'INV-2024-004', 175.00, 'overdue', '2024-10-30');
 
