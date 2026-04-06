@@ -44,17 +44,17 @@ const GuardianProfile: React.FC = () => {
   }
 
   const { data: guardian } = useQuery({
-    queryKey: ['guardian_profile', user?.id], // Ensure queryKey is consistent
+    queryKey: ['guardian_profile', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('guardians')
         .select('*')
         .eq('user_id', user?.id)
-        .single();
-      if (error) throw error;
+        .maybeSingle();
+      if (error && error.code !== 'PGRST116') throw error;
       return data;
     },
-    enabled: !!user?.id && canViewProfile, // Only fetch if user exists and has access
+    enabled: !!user?.id && canViewProfile,
   });
 
   const { data: students } = useQuery({

@@ -15,7 +15,7 @@ const TeacherDocuments: React.FC = () => {
         .from('teachers')
         .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
       return data;
     },
     enabled: !!user?.id,

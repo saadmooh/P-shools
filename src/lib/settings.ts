@@ -5,7 +5,7 @@ export const fetchSetting = async (key: string): Promise<string | null> => {
     .from('system_settings')
     .select('value')
     .eq('key', key)
-    .single(); // Assuming each key is unique
+    .maybeSingle();
 
   if (error) {
     console.error(`Error fetching setting "${key}":`, error);

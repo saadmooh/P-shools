@@ -50,8 +50,8 @@ const TeacherProfile: React.FC = () => {
         .from('teachers')
         .select('*')
         .eq('user_id', user?.id)
-        .single();
-      if (error) throw error;
+        .maybeSingle();
+      if (error && error.code !== 'PGRST116') throw error;
       return data;
     },
     enabled: !!user?.id && canViewProfile, // Only fetch if user exists and has access

@@ -22,7 +22,7 @@ const GuardianDashboard: React.FC = () => {
         .from('guardians')
         .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
       return data;
     }
   });

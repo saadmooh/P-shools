@@ -25,7 +25,7 @@ const AttendanceMarking: React.FC = () => {
         .from('sessions')
         .select('*, groups(id, name), courses(id, name)')
         .eq('id', sessionId)
-        .single();
+        .maybeSingle();
       
       if (!session) return { session: null, participants: [] };
 
