@@ -7,9 +7,10 @@ export default function ProductCard({
   original_price,
   imageUrl,
   isExclusive = false,
+  showOriginalPrice = true,
   onClick,
 }) {
-  const hasDiscount = original_price && original_price > price;
+  const hasDiscount = original_price && original_price > price && showOriginalPrice;
 
   return (
     <motion.article

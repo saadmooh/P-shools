@@ -208,6 +208,7 @@ export default function Home() {
                   price={product.price}
                   original_price={product.original_price}
                   imageUrl={product.image_url}
+                  showOriginalPrice={false}
                   onClick={() => navigate(`/products/${product.id}`)}
                 />
               </div>
