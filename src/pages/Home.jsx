@@ -16,7 +16,7 @@ export default function Home() {
   const [scanning, setScanning] = useState(false)
 
   const { data: offersWithProducts, isLoading: isOffersLoading } = useQuery({
-    queryKey: ['discounted-products-home', store?.id, user?.id],
+    queryKey: ['discounted-products-home', store?.id, user?.id, membership?.points],
     queryFn: async () => {
       if (!store?.id) return [];
       const { data, error } = await supabase
@@ -25,6 +25,7 @@ export default function Home() {
           id,
           type,
           discount_percent,
+          points_cost,
           offer_products (
             products (*)
           )
@@ -54,7 +55,8 @@ export default function Home() {
           return {
             ...product,
             offer_id: o.id,
-            offer_type: o.type
+            offer_type: o.type,
+            points_cost: o.points_cost || 0
           };
         }).filter(Boolean)
       );
@@ -69,17 +71,25 @@ export default function Home() {
         }
       }
 
-      // Simple pseudo-random shuffle based on user ID for personalization
-      if (user?.id) {
+      // Logic: Prioritize products the user can afford with points
+      const userPoints = membership?.points || 0;
+      
+      const affordable = uniqueProducts.filter(p => p.points_cost <= userPoints);
+      const expensive = uniqueProducts.filter(p => p.points_cost > userPoints);
+
+      // Simple pseudo-random shuffle based on user ID for personalization within each group
+      const shuffle = (array) => {
+        if (!user?.id) return array;
         const seed = user.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        uniqueProducts.sort((a, b) => {
+        return [...array].sort((a, b) => {
           const valA = (a.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + seed) % 100;
           const valB = (b.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + seed) % 100;
           return valA - valB;
         });
-      }
+      };
 
-      return uniqueProducts.slice(0, 6); // Just top 6 for home
+      const result = [...shuffle(affordable), ...shuffle(expensive)];
+      return result.slice(0, 8); // Top 8 for home
     },
     enabled: !!store?.id
   })
