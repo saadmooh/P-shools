@@ -128,5 +128,4 @@ CREATE POLICY "Teachers and admins can review justifications" ON absence_justifi
             WHERE u.id = auth.uid()::text
             AND u.role IN ('admin', 'teacher')
         )
-    );</content>
-<parameter name="filePath">/home/user/p-school/supabase/migrations/005_add_enrollment_tables.sql
+    );
