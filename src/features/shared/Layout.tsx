@@ -1,3 +1,4 @@
+// Build fix for useTelegramAuth hook
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTelegramAuth } from '../../hooks/useTelegramAuth';
