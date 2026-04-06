@@ -9,7 +9,7 @@ import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
 import { supabase } from '../../../lib/supabase';
 import { useTelegram } from '../../../hooks/useTelegram';
-import { useAuthPermissions } from '../../../lib/permissions';
+import { useAuthPermissions } from '../../../stores/authStore';
 
 const UsersManagement: React.FC = () => {
   const navigate = useNavigate();

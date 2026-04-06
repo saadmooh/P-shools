@@ -6,60 +6,60 @@ import Layout from '../../shared/Layout';
 import Card, { CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Users, BookOpen, Calendar, CreditCard, Shield, ArrowRight } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import { useAuthPermissions, PERMISSIONS } from '../../../lib/permissions';
+import { useAuthPermissions } from '../../../stores/authStore';
+import { PERMISSIONS } from '../../../lib/permissions';
 
 const AdminDashboard: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { hasPermission, permissions } = useAuthPermissions();
+  const { hasPermission, permissions, hasRole, isAdmin } = useAuthPermissions();
   const [availableStats, setAvailableStats] = useState<any[]>([]);
   const [availableActions, setAvailableActions] = useState<any[]>([]);
 
   useEffect(() => {
-    const loadPermissions = async () => {
-      const baseStats = [];
-      const baseActions = [];
+    const baseStats = [];
+    const baseActions = [];
 
-      // Check permissions and add items accordingly
-      if (await hasPermission(PERMISSIONS.USERS_READ) || permissions.includes('users.manage')) {
-        baseStats.push({ label: 'Users', value: '0', icon: Users, color: 'text-blue-600', path: '/admin/users' });
-      }
+    const isAdminUser = isAdmin();
+    const userPermissions = permissions;
 
-      if (await hasPermission(PERMISSIONS.SUBJECTS_READ)) {
-        baseStats.push({ label: 'Groups', value: '0', icon: BookOpen, color: 'text-green-600', path: '/admin/subjects' });
-      }
+    // Check permissions and add items accordingly
+    if (isAdminUser || userPermissions.includes('users.read') || userPermissions.includes('users.manage')) {
+      baseStats.push({ label: 'Users', value: '0', icon: Users, color: 'text-blue-600', path: '/admin/users' });
+    }
 
-      if (await hasPermission(PERMISSIONS.SESSIONS_READ)) {
-        baseStats.push({ label: 'Sessions', value: '0', icon: Calendar, color: 'text-purple-600', path: '/admin/schedule' });
-      }
+    if (isAdminUser || userPermissions.includes('subjects.read')) {
+      baseStats.push({ label: 'Groups', value: '0', icon: BookOpen, color: 'text-green-600', path: '/admin/subjects' });
+    }
 
-      if (await hasPermission(PERMISSIONS.INVOICES_READ)) {
-        baseStats.push({ label: 'Pending', value: '0', icon: CreditCard, color: 'text-orange-600', path: '/admin/invoices' });
-      }
+    if (isAdminUser || userPermissions.includes('sessions.read')) {
+      baseStats.push({ label: 'Sessions', value: '0', icon: Calendar, color: 'text-purple-600', path: '/admin/schedule' });
+    }
 
-      // Actions
-      if (await hasPermission(PERMISSIONS.STUDENTS_MANAGE)) {
-        baseActions.push({ label: 'Manage Students', icon: Users, path: '/admin/students' });
-      }
+    if (isAdminUser || userPermissions.includes('invoices.read')) {
+      baseStats.push({ label: 'Pending', value: '0', icon: CreditCard, color: 'text-orange-600', path: '/admin/invoices' });
+    }
 
-      if (await hasPermission(PERMISSIONS.SUBJECTS_MANAGE)) {
-        baseActions.push({ label: 'Subjects & Levels', icon: BookOpen, path: '/admin/subjects' });
-      }
+    // Actions
+    if (isAdminUser || userPermissions.includes('students.manage')) {
+      baseActions.push({ label: 'Manage Students', icon: Users, path: '/admin/students' });
+    }
 
-      if (permissions.includes('users.manage')) {
-        baseActions.push({ label: 'User Permissions', icon: Shield, path: '/admin/users' });
-      }
+    if (isAdminUser || userPermissions.includes('subjects.manage')) {
+      baseActions.push({ label: 'Subjects & Levels', icon: BookOpen, path: '/admin/subjects' });
+    }
 
-      if (await hasPermission(PERMISSIONS.INVOICES_MANAGE)) {
-        baseActions.push({ label: 'Invoices & Payments', icon: CreditCard, path: '/admin/invoices' });
-      }
+    if (isAdminUser || userPermissions.includes('users.manage')) {
+      baseActions.push({ label: 'User Permissions', icon: Shield, path: '/admin/users' });
+    }
 
-      setAvailableStats(baseStats);
-      setAvailableActions(baseActions);
-    };
+    if (isAdminUser || userPermissions.includes('invoices.manage')) {
+      baseActions.push({ label: 'Invoices & Payments', icon: CreditCard, path: '/admin/invoices' });
+    }
 
-    loadPermissions();
-  }, [hasPermission, permissions]);
+    setAvailableStats(baseStats);
+    setAvailableActions(baseActions);
+  }, [permissions, isAdmin]);
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin_stats'],

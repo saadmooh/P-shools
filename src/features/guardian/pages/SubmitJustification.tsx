@@ -8,7 +8,7 @@ import Card, { CardContent } from '../../../components/ui/Card';
 import Input from '../../../components/ui/Input';
 import { supabase } from '../../../lib/supabase';
 import { useTelegram } from '../../../hooks/useTelegram';
-import { useAuthPermissions } from '../../../lib/permissions'; // Import auth permissions hook
+import { useAuthPermissions } from '../../../stores/authStore';
 import { useAuthStore } from '../../../stores/authStore'; // Import useAuthStore to get user info
 
 const SubmitJustification: React.FC = () => {
@@ -16,7 +16,7 @@ const SubmitJustification: React.FC = () => {
   const { hapticFeedback, showAlert } = useTelegram();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const { hasPermission, isAdmin } = useAuthPermissions(); // Get permission checking hooks
+  const { hasRole, isAdmin } = useAuthPermissions();
   
   const [searchParams] = useSearchParams();
   const attendanceId = searchParams.get('attendanceId');
@@ -24,16 +24,10 @@ const SubmitJustification: React.FC = () => {
   const [reason, setReason] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  // Authorization check
-  const [canSubmitJustification, setCanSubmitJustification] = useState(false);
   useEffect(() => {
-    const checkPermissions = async () => {
-      // Check if user is a guardian or has a specific permission
-      const hasAccess = user?.role?.toLowerCase() === 'guardian' || await hasPermission('guardian.submit_justification');
-      setCanSubmitJustification(hasAccess);
-    };
-    checkPermissions();
-  }, [user?.role, hasPermission]);
+    const hasAccess = hasRole('Guardian') || isAdmin();
+    setCanSubmitJustification(hasAccess);
+  }, [hasRole, isAdmin]);
 
   // Show access denied if user doesn't have permission or if attendanceId is missing
   if (!canSubmitJustification || !attendanceId) {

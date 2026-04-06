@@ -9,7 +9,8 @@ import Input from '../../../components/ui/Input';
 import Select from "../../../components/ui/Select";
 import { invoicesService, Invoice } from '../../../services/supabase/billing';
 import { useTelegram } from '../../../hooks/useTelegram';
-import { useAuthPermissions, PERMISSIONS } from '../../../lib/permissions';
+import { useAuthPermissions } from '../../../stores/authStore';
+import { PERMISSIONS } from '../../../lib/permissions';
 
 const InvoicesManagement: React.FC = () => {
   const navigate = useNavigate();

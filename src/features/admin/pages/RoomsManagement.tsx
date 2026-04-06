@@ -8,7 +8,8 @@ import Card, { CardContent } from '../../../components/ui/Card';
 import Input from '../../../components/ui/Input';
 import { roomsService, RoomInsert } from '../../../services/supabase/rooms';
 import { useTelegram } from '../../../hooks/useTelegram';
-import { useAuthPermissions, PERMISSIONS } from '../../../lib/permissions';
+import { useAuthPermissions } from '../../../stores/authStore';
+import { PERMISSIONS } from '../../../lib/permissions';
 
 const RoomsManagement: React.FC = () => {
   const navigate = useNavigate();

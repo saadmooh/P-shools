@@ -1,28 +1,23 @@
-import React from 'react';
-import { User, Mail, Phone, BookOpen, DollarSign, ShieldX } from 'lucide-react'; // Import ShieldX
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Phone, BookOpen, DollarSign, ShieldX } from 'lucide-react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import Layout from '../../shared/Layout';
-import Button from '../../../components/ui/Button'; // Import Button for Access Denied screen
-import { useNavigate } from 'react-router-dom'; // Import useNavigate for redirection
-import { useAuthPermissions } from '../../../lib/permissions'; // Import auth permissions hook
+import Button from '../../../components/ui/Button';
+import { useNavigate } from 'react-router-dom';
+import { useAuthPermissions } from '../../../stores/authStore';
 
 const TeacherProfile: React.FC = () => {
   const { user } = useAuthStore();
-  const { hasPermission, isAdmin } = useAuthPermissions(); // Get permission checking hooks
+  const { hasRole, isAdmin } = useAuthPermissions();
   const navigate = useNavigate();
+  const [canViewProfile, setCanViewProfile] = useState(false);
 
-  // Authorization check
-  const [canViewProfile, setCanViewProfile] = React.useState(false);
-  React.useEffect(() => {
-    const checkPermissions = async () => {
-      // Check if user is a teacher or has a specific view permission
-      const hasAccess = user?.role?.toLowerCase() === 'teacher' || await hasPermission('teacher.view');
-      setCanViewProfile(hasAccess);
-    };
-    checkPermissions();
-  }, [user?.role, hasPermission]);
+  useEffect(() => {
+    const hasAccess = hasRole('Teacher') || isAdmin();
+    setCanViewProfile(hasAccess);
+  }, [hasRole, isAdmin]);
 
   // Show access denied if user doesn't have permission
   if (!canViewProfile) {
